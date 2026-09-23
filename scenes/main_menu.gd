@@ -40,9 +40,9 @@ func _build_ui() -> void:
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	layout.add_child(spacer)
 
-	_add_button(layout, "Start Demo Chapter", func() -> void: EventRunner.start_demo_chapter())
-	_add_button(layout, "Load Save", func() -> void: EventRunner.continue_saved_game())
-	_add_button(layout, "System Abilities", func() -> void: UIManager.show_scene("res://scenes/system_screen.tscn"))
+	_add_button(layout, "Start Demo Chapter", func() -> void: _singleton("EventRunner").start_demo_chapter())
+	_add_button(layout, "Load Save", func() -> void: _singleton("EventRunner").continue_saved_game())
+	_add_button(layout, "System Abilities", func() -> void: _singleton("UIManager").show_scene("res://scenes/system_screen.tscn"))
 	_add_button(layout, "Validate Project", _show_validation)
 
 	var bottom := Control.new()
@@ -59,11 +59,15 @@ func _add_button(parent: VBoxContainer, text: String, target: Callable) -> void:
 
 
 func _show_validation() -> void:
-	var report := ValidationManager.validation_report()
-	await UIManager.show_story_event({
+	var report: String = _singleton("ValidationManager").validation_report()
+	await _singleton("UIManager").show_story_event({
 		"kind": "narration",
 		"title": "Validation",
 		"text": report,
 		"next": ""
 	})
-	await UIManager.show_main_menu()
+	await _singleton("UIManager").show_main_menu()
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

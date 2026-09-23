@@ -12,11 +12,11 @@ var actions_box: VBoxContainer
 
 func start(new_params: Dictionary) -> void:
 	super.start(new_params)
-	var enemies: Variant = DataManager.load_json("res://data/enemies.json", {})
-	action_data = DataManager.load_json("res://data/battle_actions.json", {})
+	var enemies: Variant = _singleton("DataManager").load_json("res://data/enemies.json", {})
+	action_data = _singleton("DataManager").load_json("res://data/battle_actions.json", {})
 	enemy_id = params.get("enemy", "training_drone")
 	enemy = enemies.get(enemy_id, {}) if enemies is Dictionary else {}
-	player_hull = int(ShipState.ship_data.get("stats", {}).get("hull", 100))
+	player_hull = int(_singleton("ShipState").ship_data.get("stats", {}).get("hull", 100))
 	enemy_hull = int(enemy.get("stats", {}).get("hull", 50))
 	_build_ui()
 	_refresh()
@@ -92,11 +92,11 @@ func _refresh(extra_log: String = "") -> void:
 
 func _get_player_action_ids() -> Array:
 	var ids: Array = []
-	for ability in ShipState.ship_data.get("abilities", []):
+	for ability in _singleton("ShipState").ship_data.get("abilities", []):
 		if not ids.has(ability):
 			ids.append(ability)
 
-	for module in ShipState.ship_data.get("modules", {}).values():
+	for module in _singleton("ShipState").ship_data.get("modules", {}).values():
 		if module is Dictionary and module.has("action") and not ids.has(module["action"]):
 			ids.append(module["action"])
 
@@ -109,7 +109,7 @@ func _use_action(action_id: String) -> void:
 
 	if action.get("type", "attack") == "defense":
 		defending = true
-		_enemy_turn("%s braces for impact." % ShipState.ship_data.get("name", "The ship"))
+		_enemy_turn("%s braces for impact." % _singleton("ShipState").ship_data.get("name", "The ship"))
 		return
 
 	var damage := int(action.get("damage", 0))
@@ -126,20 +126,20 @@ func _enemy_turn(log: String) -> void:
 	if defending:
 		damage = int(ceil(float(damage) * 0.35))
 	player_hull = max(0, player_hull - damage)
-	ShipState.ship_data["stats"]["hull"] = player_hull
+	_singleton("ShipState").ship_data["stats"]["hull"] = player_hull
 	_refresh("%s\n%s deals %s damage." % [log, enemy_attack.get("name", "Enemy attack"), damage])
 
 
 func _retry() -> void:
-	player_hull = int(ShipState.ship_data.get("stats", {}).get("hull_max", 100))
+	player_hull = int(_singleton("ShipState").ship_data.get("stats", {}).get("hull_max", 100))
 	enemy_hull = int(enemy.get("stats", {}).get("hull", 50))
-	ShipState.ship_data["stats"]["hull"] = player_hull
+	_singleton("ShipState").ship_data["stats"]["hull"] = player_hull
 	_refresh("Systems restored for a training retry.")
 
 
 func _finish_victory() -> void:
 	var rewards: Dictionary = enemy.get("rewards", {})
-	ShipState.ship_data["stats"]["hull"] = max(player_hull, 1)
+	_singleton("ShipState").ship_data["stats"]["hull"] = max(player_hull, 1)
 	finish({
 		"success": true,
 		"resources_found": rewards.get("resources", {}),
@@ -151,3 +151,7 @@ func _finish_victory() -> void:
 			}
 		]
 	})
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

@@ -83,7 +83,7 @@ func _add_background() -> void:
 	if asset_id.is_empty():
 		return
 
-	var path := AssetManifestManager.resolve(asset_id)
+	var path: String = _singleton("AssetManifestManager").resolve(asset_id)
 	if path.is_empty():
 		return
 
@@ -107,3 +107,7 @@ func _image_mode_to_stretch(mode: String) -> int:
 			return TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		_:
 			return TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

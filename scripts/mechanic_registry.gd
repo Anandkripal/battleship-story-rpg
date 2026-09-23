@@ -12,7 +12,7 @@ func _ready() -> void:
 
 func load_registered_mechanics() -> void:
 	mechanics.clear()
-	var data: Variant = DataManager.load_json("res://data/mechanics.json", {})
+	var data: Variant = _singleton("DataManager").load_json("res://data/mechanics.json", {})
 	if not (data is Dictionary):
 		return
 
@@ -55,7 +55,7 @@ func run_mechanic(mechanic_id: String, params: Dictionary = {}) -> Dictionary:
 		}
 
 	var mechanic := packed.instantiate()
-	await UIManager.show_instance(mechanic)
+	await _singleton("UIManager").show_instance(mechanic)
 
 	if mechanic.has_method("start"):
 		mechanic.start(params)
@@ -67,3 +67,7 @@ func run_mechanic(mechanic_id: String, params: Dictionary = {}) -> Dictionary:
 
 	var result: Variant = await mechanic.completed
 	return result if result is Dictionary else {"success": false, "error": "Mechanic returned a non-dictionary result."}
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

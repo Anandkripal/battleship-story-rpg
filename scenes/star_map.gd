@@ -5,7 +5,7 @@ var locations: Dictionary = {}
 
 func start(new_params: Dictionary) -> void:
 	super.start(new_params)
-	var data: Variant = DataManager.load_json("res://data/locations.json", {})
+	var data: Variant = _singleton("DataManager").load_json("res://data/locations.json", {})
 	locations = data if data is Dictionary else {}
 	_build_ui()
 
@@ -50,7 +50,7 @@ func _build_ui() -> void:
 
 	for location_id in locations.keys():
 		var location: Dictionary = locations[location_id]
-		var unlocked := bool(location.get("unlocked", false)) or WorldState.state.get("unlocked_regions", []).has(location_id)
+		var unlocked: bool = bool(location.get("unlocked", false)) or _singleton("WorldState").state.get("unlocked_regions", []).has(location_id)
 		var button := make_button("%s\n%s" % [location.get("name", location_id), location.get("type", "unknown")])
 		button.disabled = not unlocked
 		button.pressed.connect(func() -> void: _select_location(location_id))
@@ -74,3 +74,7 @@ func _select_location(location_id: String) -> void:
 			}
 		]
 	})
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

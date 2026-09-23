@@ -54,9 +54,13 @@ func _build_ui() -> void:
 	var menu := Button.new()
 	menu.text = "Return to Main Menu"
 	menu.custom_minimum_size = Vector2(0, 60)
-	menu.pressed.connect(func() -> void: UIManager.show_main_menu())
+	menu.pressed.connect(func() -> void: _singleton("UIManager").show_main_menu())
 	layout.add_child(menu)
 
 	var spacer_b := Control.new()
 	spacer_b.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	layout.add_child(spacer_b)
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

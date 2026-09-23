@@ -7,7 +7,7 @@ var target_data: Dictionary = {}
 func start(new_params: Dictionary) -> void:
 	super.start(new_params)
 	target_id = params.get("target", "")
-	var targets: Variant = DataManager.load_json("res://data/scan_targets.json", {})
+	var targets: Variant = _singleton("DataManager").load_json("res://data/scan_targets.json", {})
 	target_data = targets.get(target_id, {}) if targets is Dictionary else {}
 	_build_ui()
 
@@ -79,3 +79,7 @@ func _format_dictionary(data: Dictionary, indent: int = 0) -> String:
 		else:
 			lines.append("%s: %s" % [prefix, str(value)])
 	return "\n".join(lines)
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

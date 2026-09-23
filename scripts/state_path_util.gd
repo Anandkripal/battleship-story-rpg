@@ -10,9 +10,9 @@ const VALID_ROOTS := ["player", "ship", "world"]
 
 func get_roots() -> Dictionary:
 	return {
-		"player": PlayerState.state,
-		"ship": ShipState.ship_data,
-		"world": WorldState.state
+		"player": _singleton("PlayerState").state,
+		"ship": _singleton("ShipState").ship_data,
+		"world": _singleton("WorldState").state
 	}
 
 
@@ -162,3 +162,7 @@ func _number_or_zero(value: Variant) -> float:
 	if value is String and String(value).is_valid_float():
 		return float(value)
 	return 0.0
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

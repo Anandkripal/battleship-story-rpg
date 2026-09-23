@@ -127,10 +127,14 @@ func _check_ref(next_id: String, event_id: String, ids: Dictionary, errors: Arra
 
 
 func _validate_state_path(path: String, event_id: String, errors: Array) -> void:
-	if not StatePathUtil.is_valid_state_path(path):
+	if not _singleton("StatePathUtil").is_valid_state_path(path):
 		errors.append("Event '%s' has invalid state path '%s'." % [event_id, path])
 
 
 func _validate_asset(asset_id: String, event_id: String, errors: Array) -> void:
-	if not AssetManifestManager.has_asset(asset_id):
+	if not _singleton("AssetManifestManager").has_asset(asset_id):
 		errors.append("Event '%s' references missing manifest asset '%s'." % [event_id, asset_id])
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

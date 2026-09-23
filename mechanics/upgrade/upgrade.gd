@@ -6,7 +6,7 @@ var info_label: Label
 
 func start(new_params: Dictionary) -> void:
 	super.start(new_params)
-	var data: Variant = DataManager.load_json("res://data/upgrades.json", {})
+	var data: Variant = _singleton("DataManager").load_json("res://data/upgrades.json", {})
 	upgrades = data if data is Dictionary else {}
 	_build_ui()
 
@@ -38,7 +38,7 @@ func _build_ui() -> void:
 
 	info_label = Label.new()
 	info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info_label.text = "Choose an upgrade. Source Points: %s" % PlayerState.state.get("resources", {}).get("source_points", 0)
+	info_label.text = "Choose an upgrade. Source Points: %s" % _singleton("PlayerState").state.get("resources", {}).get("source_points", 0)
 	layout.add_child(info_label)
 
 	var scroll := ScrollContainer.new()
@@ -70,7 +70,7 @@ func _upgrade_label(upgrade: Dictionary) -> String:
 
 func _can_afford(cost: Dictionary) -> bool:
 	for resource_id in cost.keys():
-		if PlayerState.state.get("resources", {}).get(resource_id, 0) < cost[resource_id]:
+		if _singleton("PlayerState").state.get("resources", {}).get(resource_id, 0) < cost[resource_id]:
 			return false
 	return true
 
@@ -100,3 +100,7 @@ func _buy_upgrade(upgrade_id: String) -> void:
 		"upgrade": upgrade_id,
 		"changes": changes
 	})
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

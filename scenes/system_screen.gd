@@ -30,7 +30,7 @@ func _build_ui() -> void:
 	title.add_theme_font_size_override("font_size", 32)
 	layout.add_child(title)
 
-	var data: Variant = DataManager.load_json("res://data/system_abilities.json", {})
+	var data: Variant = _singleton("DataManager").load_json("res://data/system_abilities.json", {})
 	for ability_id in (data.keys() if data is Dictionary else []):
 		var ability: Dictionary = data[ability_id]
 		var button := Button.new()
@@ -50,5 +50,9 @@ func _build_ui() -> void:
 	var back := Button.new()
 	back.text = "Back"
 	back.custom_minimum_size = Vector2(0, 58)
-	back.pressed.connect(func() -> void: UIManager.show_main_menu())
+	back.pressed.connect(func() -> void: _singleton("UIManager").show_main_menu())
 	layout.add_child(back)
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)

@@ -15,12 +15,12 @@ func _ready() -> void:
 
 func reload() -> void:
 	manifest.clear()
-	var public_data: Variant = DataManager.load_json(PUBLIC_MANIFEST, {})
+	var public_data: Variant = _singleton("DataManager").load_json(PUBLIC_MANIFEST, {})
 	if public_data is Dictionary:
 		manifest.merge(public_data, true)
 
 	if FileAccess.file_exists(LOCAL_MANIFEST):
-		var local_data: Variant = DataManager.load_json(LOCAL_MANIFEST, {})
+		var local_data: Variant = _singleton("DataManager").load_json(LOCAL_MANIFEST, {})
 		if local_data is Dictionary:
 			manifest.merge(local_data, true)
 
@@ -38,3 +38,7 @@ func resolve(asset_id: String) -> String:
 
 func get_entry(asset_id: String) -> Dictionary:
 	return manifest.get(asset_id, {})
+
+
+func _singleton(singleton_name: String) -> Variant:
+	return get_node("/root/%s" % singleton_name)
