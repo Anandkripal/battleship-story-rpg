@@ -1,0 +1,174 @@
+{
+	"id": "demo_chapter_001",
+	"title": "Demo Chapter 001: First Wake",
+	"start_event": "main_menu_departure",
+	"events": [
+		{
+			"id": "main_menu_departure",
+			"kind": "story",
+			"background": "demo_space",
+			"image_mode": "fill",
+			"speaker": "Ship Core",
+			"text": "Power returns in quiet waves. Your starter ship floats above a training world, patched together but responsive.",
+			"next": "calibration_narration"
+		},
+		{
+			"id": "calibration_narration",
+			"kind": "narration",
+			"background": "demo_training_deck",
+			"image_mode": "fit",
+			"title": "Calibration",
+			"text": "This public demo uses original placeholder text and art. Private chapter assets can be added locally later without entering Git.",
+			"next": "first_choice"
+		},
+		{
+			"id": "first_choice",
+			"kind": "choice",
+			"background": "demo_space",
+			"speaker": "Ship Core",
+			"text": "A training vessel drifts nearby. How do you begin the systems check?",
+			"choices": [
+				{
+					"text": "Run a careful scan.",
+					"next": "scan_training_ship"
+				},
+				{
+					"text": "Let the ship guide the scan.",
+					"next": "scan_training_ship"
+				}
+			]
+		},
+		{
+			"id": "scan_training_ship",
+			"kind": "mechanic",
+			"mechanic": "scan",
+			"params": {
+				"target": "training_ship"
+			},
+			"next": "post_scan_story"
+		},
+		{
+			"id": "post_scan_story",
+			"kind": "story",
+			"background": "demo_space",
+			"speaker": "Ship Core",
+			"text": "The scan resolves into a clean profile. Your interface records the vessel as a harmless training target.",
+			"next": "scanner_check"
+		},
+		{
+			"id": "scanner_check",
+			"kind": "conditional",
+			"condition": {
+				"path": "ship.stats.scanner_level",
+				"operator": ">=",
+				"value": 2
+			},
+			"true_next": "advanced_scan_note",
+			"false_next": "basic_scan_note"
+		},
+		{
+			"id": "advanced_scan_note",
+			"kind": "narration",
+			"background": "demo_space",
+			"title": "Enhanced Reading",
+			"text": "Your upgraded scanner catches faint resource echoes beyond the training orbit.",
+			"next": "map_intro"
+		},
+		{
+			"id": "basic_scan_note",
+			"kind": "narration",
+			"background": "demo_space",
+			"title": "Basic Reading",
+			"text": "The basic scanner marks a nearby asteroid field as safe enough for a short mining drill.",
+			"next": "map_intro"
+		},
+		{
+			"id": "map_intro",
+			"kind": "story",
+			"background": "demo_space",
+			"speaker": "Ship Core",
+			"text": "The star map opens with two reachable locations. Choose a destination for the next exercise.",
+			"next": "show_map"
+		},
+		{
+			"id": "show_map",
+			"kind": "mechanic",
+			"mechanic": "map",
+			"params": {},
+			"next": "mining_intro"
+		},
+		{
+			"id": "mining_intro",
+			"kind": "narration",
+			"background": "demo_space",
+			"title": "Asteroid Drill",
+			"text": "The field is stable. Tap asteroids to identify useful material before the drill window closes.",
+			"next": "mining_run"
+		},
+		{
+			"id": "mining_run",
+			"kind": "mechanic",
+			"mechanic": "mining",
+			"params": {},
+			"next": "battle_intro"
+		},
+		{
+			"id": "battle_intro",
+			"kind": "story",
+			"background": "demo_space",
+			"speaker": "Ship Core",
+			"text": "A training drone powers up. Its weapons are tuned low, but the battle loop is real enough to test your ship.",
+			"next": "battle_training_drone"
+		},
+		{
+			"id": "battle_training_drone",
+			"kind": "mechanic",
+			"mechanic": "battle",
+			"params": {
+				"enemy": "training_drone"
+			},
+			"next": "demo_reward"
+		},
+		{
+			"id": "demo_reward",
+			"kind": "reward",
+			"background": "demo_space",
+			"title": "Training Rewards",
+			"text": "The drone powers down. The ship authorizes a small upgrade budget for your next modification.",
+			"changes": [
+				{
+					"path": "player.resources.source_points",
+					"operation": "add",
+					"value": 5
+				},
+				{
+					"path": "player.resources.credits",
+					"operation": "add",
+					"value": 25
+				}
+			],
+			"next": "upgrade_ship"
+		},
+		{
+			"id": "upgrade_ship",
+			"kind": "mechanic",
+			"mechanic": "upgrade",
+			"params": {},
+			"next": "complete_story"
+		},
+		{
+			"id": "complete_story",
+			"kind": "story",
+			"background": "demo_space",
+			"speaker": "Ship Core",
+			"text": "The starter ship settles into a steadier rhythm. The framework is ready for future chapters, stranger systems, and private local content.",
+			"next": "chapter_complete"
+		},
+		{
+			"id": "chapter_complete",
+			"kind": "end",
+			"title": "Demo Chapter Complete",
+			"text": "You completed the public demo flow: story, choice, scan, map, mining, battle, reward, and upgrade."
+		}
+	]
+}

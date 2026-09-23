@@ -1,0 +1,20 @@
+{
+	"reinforced_hull_1": {
+		"name": "Reinforced Hull",
+		"target_path": "ship.stats.hull_max",
+		"operation": "add",
+		"value": 20,
+		"cost": {
+			"source_points": 5
+		}
+	},
+	"scanner_tuning_1": {
+		"name": "Scanner Tuning",
+		"target_path": "ship.stats.scanner_level",
+		"operation": "add",
+		"value": 1,
+		"cost": {
+			"credits": 50
+		}
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"training_planet": {
+		"name": "Training Planet",
+		"type": "planet",
+		"unlocked": true
+	},
+	"asteroid_field": {
+		"name": "Asteroid Field",
+		"type": "resource_zone",
+		"unlocked": true
+	},
+	"relay_horizon": {
+		"name": "Relay Horizon",
+		"type": "signal_region",
+		"unlocked": false
+	}
+}

@@ -1,0 +1,40 @@
+# Godot 4
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+*.translation
+
+# Godot export output
+/build/
+/exports/
+/android/
+
+# macOS
+.DS_Store
+._*
+
+# VS Code
+.vscode/
+
+# Logs, temp files, local saves
+*.tmp
+*.log
+*.bak
+*.swp
+*.swo
+savegame.json
+user_data/
+local_saves/
+test_saves/
+
+# Private/local reference material. These folders are created locally for
+# development, but must never be committed to this public repository.
+private_assets/
+local_content/
+reference_material/
+assets/manhua/
+assets/private/
+chapters/private/
+chapters/local/
+assets/asset_manifest.local.json

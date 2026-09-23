@@ -1,0 +1,49 @@
+; Engine configuration file.
+; This project is intentionally small and data-driven so new chapter systems can
+; be added without changing the event runner.
+
+config_version=5
+
+[application]
+
+config/name="Battleship Story RPG"
+config/description="A story-driven sci-fi battleship progression framework."
+run/main_scene="res://scenes/main_menu.tscn"
+config/features=PackedStringArray("4.x", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+DataManager="*res://scripts/data_manager.gd"
+PlayerState="*res://scripts/player_state.gd"
+ShipState="*res://scripts/ship_state.gd"
+WorldState="*res://scripts/world_state.gd"
+StatePathUtil="*res://scripts/state_path_util.gd"
+AssetManifestManager="*res://scripts/asset_manifest_manager.gd"
+UIManager="*res://scripts/ui_manager.gd"
+MechanicRegistry="*res://scripts/mechanic_registry.gd"
+ChapterManager="*res://scripts/chapter_manager.gd"
+SaveManager="*res://scripts/save_manager.gd"
+ValidationManager="*res://scripts/validation_manager.gd"
+EventRunner="*res://scripts/event_runner.gd"
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1280
+window/size/window_width_override=432
+window/size/window_height_override=768
+window/size/resizable=true
+window/handheld/orientation=1
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+pointing/emulate_mouse_from_touch=true
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#08111f"/>
+      <stop offset="0.55" stop-color="#122138"/>
+      <stop offset="1" stop-color="#071018"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="1280" fill="url(#sky)"/>
+  <circle cx="590" cy="170" r="78" fill="#d6f2ff" opacity="0.22"/>
+  <circle cx="186" cy="326" r="2" fill="#ffffff"/>
+  <circle cx="604" cy="402" r="3" fill="#ffffff"/>
+  <circle cx="89" cy="731" r="2" fill="#ffffff"/>
+  <circle cx="514" cy="829" r="2" fill="#ffffff"/>
+  <circle cx="298" cy="980" r="3" fill="#ffffff"/>
+  <path d="M96 785 L360 655 L624 785 L522 835 L360 760 L198 835 Z" fill="#8fd6ff" opacity="0.32"/>
+  <path d="M160 802 L360 714 L560 802 L360 880 Z" fill="#d9fbff" opacity="0.18"/>
+  <text x="360" y="1130" text-anchor="middle" fill="#c8f4ff" font-family="Arial, sans-serif" font-size="30">ORIGINAL PUBLIC PLACEHOLDER</text>
+</svg>

@@ -1,0 +1,14 @@
+{
+	"training_ship": {
+		"name": "Training Vessel",
+		"type": "Light Utility Ship",
+		"rating": "F",
+		"stats": {
+			"hull": 100,
+			"armor": 40
+		},
+		"modules": {
+			"engine": "basic_engine"
+		}
+	}
+}

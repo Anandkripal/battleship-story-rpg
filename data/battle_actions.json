@@ -1,0 +1,16 @@
+{
+	"main_cannon": {
+		"name": "Main Cannon",
+		"type": "attack",
+		"damage": 18
+	},
+	"missile_launcher": {
+		"name": "Missile Launcher",
+		"type": "attack",
+		"damage": 28
+	},
+	"defend": {
+		"name": "Defend",
+		"type": "defense"
+	}
+}

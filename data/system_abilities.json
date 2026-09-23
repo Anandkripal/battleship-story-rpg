@@ -1,0 +1,15 @@
+{
+	"scan": {
+		"name": "Scan",
+		"unlocked": true,
+		"level": 1
+	},
+	"high_speed_interface": {
+		"name": "High-Speed Human-Machine Interface",
+		"unlocked": false
+	},
+	"cross_space_signal": {
+		"name": "Cross-Space Signal Capture",
+		"unlocked": false
+	}
+}

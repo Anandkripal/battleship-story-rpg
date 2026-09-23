@@ -1,0 +1,14 @@
+{
+	"demo_space": {
+		"file": "res://assets/demo/space_placeholder.svg",
+		"category": "background",
+		"recommended_use": "story_background",
+		"notes": "Original public placeholder asset created for this demo."
+	},
+	"demo_training_deck": {
+		"file": "res://assets/demo/space_placeholder.svg",
+		"category": "background",
+		"recommended_use": "story_background",
+		"notes": "Reuses the public placeholder asset for prototype story scenes."
+	}
+}

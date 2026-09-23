@@ -1,0 +1,22 @@
+{
+	"scan": {
+		"scene": "res://mechanics/scan/scan.tscn",
+		"description": "Dynamic target scan read from data/scan_targets.json."
+	},
+	"mining": {
+		"scene": "res://mechanics/mining/mining.tscn",
+		"description": "Simple touch/mouse asteroid scan mini-game."
+	},
+	"battle": {
+		"scene": "res://mechanics/battle/battle.tscn",
+		"description": "Semi-turn-based ship battle with data-driven actions."
+	},
+	"upgrade": {
+		"scene": "res://mechanics/upgrade/upgrade.tscn",
+		"description": "Data-driven upgrade picker."
+	},
+	"map": {
+		"scene": "res://scenes/star_map.tscn",
+		"description": "Data-driven location selection screen."
+	}
+}

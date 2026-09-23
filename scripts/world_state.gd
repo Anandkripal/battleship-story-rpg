@@ -1,0 +1,36 @@
+extends Node
+
+## Flexible world state for map, factions, technologies, and future progression.
+
+var state: Dictionary = {}
+
+
+func _ready() -> void:
+	reset()
+
+
+func reset() -> void:
+	var shared_flags := {}
+	state = {
+		"discovered_locations": [],
+		"known_planets": {},
+		"factions": {},
+		"faction_reputation": {},
+		"unlocked_regions": [],
+		"current_location": "training_planet",
+		"world_flags": shared_flags,
+		"flags": shared_flags,
+		"discovered_technologies": {}
+	}
+
+
+func to_dict() -> Dictionary:
+	return state.duplicate(true)
+
+
+func from_dict(data: Dictionary) -> void:
+	state = data.duplicate(true)
+	if not state.has("flags") and state.has("world_flags"):
+		state["flags"] = state["world_flags"]
+	if not state.has("world_flags") and state.has("flags"):
+		state["world_flags"] = state["flags"]
