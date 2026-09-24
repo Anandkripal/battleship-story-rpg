@@ -44,5 +44,19 @@ func reset_game() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 
 
+func saved_chapter_completed(chapter_id: String) -> bool:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return false
+
+	var data: Variant = _singleton("DataManager").load_json(SAVE_PATH, {})
+	if not (data is Dictionary):
+		return false
+
+	var player: Dictionary = data.get("player", {})
+	var progress: Dictionary = player.get("progress", {})
+	var completed: Dictionary = progress.get("completed_chapters", {})
+	return bool(completed.get(chapter_id, false))
+
+
 func _singleton(singleton_name: String) -> Variant:
 	return get_node("/root/%s" % singleton_name)

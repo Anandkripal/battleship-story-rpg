@@ -32,8 +32,8 @@ func _init() -> void:
 	if chapter is Dictionary:
 		_validate_chapter(chapter, mechanics if mechanics is Dictionary else {}, manifest if manifest is Dictionary else {}, errors)
 
-	if FileAccess.file_exists("res://chapters/private/chapter_001.json"):
-		var private_chapter: Variant = _load_json("res://chapters/private/chapter_001.json", errors)
+	for private_chapter_path in _private_chapter_paths():
+		var private_chapter: Variant = _load_json(private_chapter_path, errors)
 		if private_chapter is Dictionary:
 			_validate_chapter(private_chapter, mechanics if mechanics is Dictionary else {}, manifest if manifest is Dictionary else {}, errors)
 
@@ -64,6 +64,23 @@ func _load_json(path: String, errors: Array[String]) -> Variant:
 		errors.append("Invalid JSON in %s at line %s: %s" % [path, json.get_error_line(), json.get_error_message()])
 		return null
 	return json.data
+
+
+func _private_chapter_paths() -> Array[String]:
+	var paths: Array[String] = []
+	var directory := DirAccess.open("res://chapters/private")
+	if directory == null:
+		return paths
+
+	directory.list_dir_begin()
+	var file_name := directory.get_next()
+	while not file_name.is_empty():
+		if not directory.current_is_dir() and file_name.get_extension().to_lower() == "json":
+			paths.append("res://chapters/private/%s" % file_name)
+		file_name = directory.get_next()
+	directory.list_dir_end()
+	paths.sort()
+	return paths
 
 
 func _load_manifest(errors: Array[String]) -> Variant:
@@ -177,6 +194,11 @@ func _validate_mechanic_params(event: Dictionary, event_id: String, errors: Arra
 				var locations: Variant = _load_data_file("locations.json", errors)
 				if not (locations is Dictionary and locations.has(location_id)):
 					errors.append("Event '%s' references missing location '%s'." % [event_id, location_id])
+		"battle":
+			var enemy_id: String = params.get("enemy", "")
+			var enemies: Variant = _load_data_file("enemies.json", errors)
+			if enemy_id.is_empty() or not (enemies is Dictionary and enemies.has(enemy_id)):
+				errors.append("Event '%s' references missing enemy '%s'." % [event_id, enemy_id])
 
 
 func _check_ref(next_id: String, event_id: String, ids: Dictionary, errors: Array[String]) -> void:

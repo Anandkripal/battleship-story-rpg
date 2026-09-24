@@ -75,6 +75,14 @@ func process_event(event: Dictionary) -> String:
 		"jump":
 			return event.get("next", "")
 		"end":
+			_singleton("StatePathUtil").apply_changes(event.get("changes", []))
+			var chapter_id: String = _singleton("ChapterManager").current_chapter.get("id", _singleton("ChapterManager").current_chapter_path)
+			if not chapter_id.is_empty():
+				_singleton("StatePathUtil").apply_change({
+					"path": "player.progress.completed_chapters.%s" % chapter_id,
+					"operation": "set",
+					"value": true
+				})
 			_singleton("SaveManager").save_game()
 			await _singleton("UIManager").show_chapter_complete({
 				"title": event.get("title", "Chapter Complete"),

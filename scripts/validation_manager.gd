@@ -38,8 +38,8 @@ func validate_project() -> Array:
 	if chapter is Dictionary:
 		_validate_chapter(chapter, mechanics if mechanics is Dictionary else {}, errors)
 
-	if FileAccess.file_exists("res://chapters/private/chapter_001.json"):
-		errors.append_array(validate_chapter_path("res://chapters/private/chapter_001.json"))
+	for private_chapter_path in _private_chapter_paths():
+		errors.append_array(validate_chapter_path(private_chapter_path))
 
 	return errors
 
@@ -77,6 +77,23 @@ func _load_json_checked(path: String, errors: Array) -> Variant:
 		return null
 
 	return json.data
+
+
+func _private_chapter_paths() -> Array[String]:
+	var paths: Array[String] = []
+	var directory := DirAccess.open("res://chapters/private")
+	if directory == null:
+		return paths
+
+	directory.list_dir_begin()
+	var file_name := directory.get_next()
+	while not file_name.is_empty():
+		if not directory.current_is_dir() and file_name.get_extension().to_lower() == "json":
+			paths.append("res://chapters/private/%s" % file_name)
+		file_name = directory.get_next()
+	directory.list_dir_end()
+	paths.sort()
+	return paths
 
 
 func _validate_chapter(chapter: Dictionary, mechanics: Dictionary, errors: Array) -> void:
@@ -150,6 +167,11 @@ func _validate_mechanic_params(event: Dictionary, event_id: String, errors: Arra
 				var locations: Variant = _singleton("DataManager").load_data_file("locations.json", {})
 				if not (locations is Dictionary and locations.has(preferred_location)):
 					errors.append("Event '%s' references missing location '%s'." % [event_id, preferred_location])
+		"battle":
+			var enemy_id: String = params.get("enemy", "")
+			var enemies: Variant = _singleton("DataManager").load_data_file("enemies.json", {})
+			if enemy_id.is_empty() or not (enemies is Dictionary and enemies.has(enemy_id)):
+				errors.append("Event '%s' references missing enemy '%s'." % [event_id, enemy_id])
 
 
 func _check_ref(next_id: String, event_id: String, ids: Dictionary, errors: Array) -> void:

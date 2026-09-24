@@ -79,6 +79,13 @@ func _build_ui() -> void:
 	_add_button(actions, "Start Demo Chapter", func() -> void: _singleton("EventRunner").start_demo_chapter())
 	if FileAccess.file_exists("res://chapters/private/chapter_001.json"):
 		_add_button(actions, "Private Chapter 1", func() -> void: _singleton("EventRunner").start_chapter("res://chapters/private/chapter_001.json"))
+	if FileAccess.file_exists("res://chapters/private/chapter_002.json"):
+		var chapter_2_unlocked: bool = _singleton("SaveManager").saved_chapter_completed("private:chapter_001")
+		var chapter_2_button := _add_button(actions, "Private Chapter 2", func() -> void: _singleton("EventRunner").start_chapter("res://chapters/private/chapter_002.json"))
+		chapter_2_button.disabled = not chapter_2_unlocked
+		if not chapter_2_unlocked:
+			chapter_2_button.text = "Private Chapter 2 (Locked)"
+			_add_button(actions, "Private Chapter 2 (Dev)", func() -> void: _singleton("EventRunner").start_chapter("res://chapters/private/chapter_002.json"))
 	_add_button(actions, "Load Save", func() -> void: _singleton("EventRunner").continue_saved_game())
 	_add_button(actions, "System Abilities", func() -> void: _singleton("UIManager").show_scene("res://scenes/system_screen.tscn"))
 	_add_button(actions, "Validate Project", _show_validation)
@@ -88,13 +95,14 @@ func _build_ui() -> void:
 	actions.add_child(action_bottom)
 
 
-func _add_button(parent: VBoxContainer, text: String, target: Callable) -> void:
+func _add_button(parent: VBoxContainer, text: String, target: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(0, 64)
 	button.add_theme_font_size_override("font_size", 24)
 	button.pressed.connect(target)
 	parent.add_child(button)
+	return button
 
 
 func _show_validation() -> void:
