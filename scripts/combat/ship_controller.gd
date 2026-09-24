@@ -37,6 +37,7 @@ var engine_glows: Array[MeshInstance3D] = []
 var engine_particles: Array[GPUParticles3D] = []
 var selection_ring: MeshInstance3D
 var shield_flash: MeshInstance3D
+var marker_label: Label3D
 
 
 func setup(config: Dictionary, definition: Dictionary, weapon_defs: Dictionary) -> void:
@@ -179,6 +180,13 @@ func set_selected(selected: bool) -> void:
 		selection_ring.visible = selected
 
 
+func set_marker_text(text: String, color: Color) -> void:
+	if marker_label == null:
+		return
+	marker_label.text = text
+	marker_label.modulate = color
+
+
 func get_status_percent() -> Dictionary:
 	return {
 		"shield": shield / max(1.0, float(stats.get("max_shield", 1))),
@@ -263,6 +271,7 @@ func _build_ship(definition: Dictionary) -> void:
 	_add_hardpoints()
 	_add_engine_effects()
 	_add_selection_and_shield()
+	_add_marker_label()
 
 
 func _add_visual_wrapper(definition: Dictionary) -> void:
@@ -363,6 +372,20 @@ func _add_selection_and_shield() -> void:
 	shield_flash.material_override = shield_material
 	shield_flash.visible = false
 	vfx_root.add_child(shield_flash)
+
+
+func _add_marker_label() -> void:
+	marker_label = Label3D.new()
+	marker_label.name = "TacticalLabel"
+	marker_label.text = display_name
+	marker_label.position = Vector3(0, max(90.0, visual_length * 0.42), 0)
+	marker_label.font_size = 42
+	marker_label.pixel_size = max(0.9, visual_length * 0.006)
+	marker_label.outline_size = 8
+	marker_label.outline_modulate = Color(0.0, 0.0, 0.0, 0.9)
+	marker_label.modulate = Color(0.35, 0.95, 1.0) if faction == "player" else Color(1.0, 0.35, 0.24)
+	marker_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	vfx_root.add_child(marker_label)
 
 
 func _engine_material(intensity: float) -> StandardMaterial3D:

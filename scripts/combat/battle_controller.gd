@@ -93,7 +93,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP and mouse_event.pressed:
 			camera_distance = max(180.0, camera_distance * 0.88)
 		elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN and mouse_event.pressed:
-			camera_distance = min(2600.0, camera_distance * 1.12)
+			camera_distance = min(36000.0, camera_distance * 1.12)
 		elif mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
 			_handle_left_click(mouse_event.position)
 	elif event is InputEventMouseMotion:
@@ -141,6 +141,10 @@ func _start_battle() -> void:
 		selected_ship.set_selected(true)
 		camera_target = selected_ship.global_position
 		follow_selected = true
+	if bool(config.get("auto_select_first_enemy", false)) and not enemy_ships.is_empty():
+		target_ship = enemy_ships[0]
+		manual_scans[target_ship.ship_id] = true
+		target_ship.set_selected(true)
 	result = {
 		"result": "running",
 		"ships_destroyed": 0,
@@ -151,7 +155,9 @@ func _start_battle() -> void:
 		"alternate_space": bool(payload.get("alternate_space", false))
 	}
 	_refresh_hud()
+	_update_ship_markers()
 	_start_intro()
+	_apply_opening_camera()
 
 
 func _build_world() -> void:
@@ -160,13 +166,15 @@ func _build_world() -> void:
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.004, 0.006, 0.015)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.06, 0.08, 0.12)
+	var env_data: Dictionary = config.get("environment", {})
+	env.ambient_light_color = _array_to_color(env_data.get("ambient_color", [0.11, 0.14, 0.2]), Color(0.11, 0.14, 0.2))
+	env.ambient_light_energy = float(env_data.get("ambient_energy", 0.8))
 	env.glow_enabled = true
-	env.glow_intensity = 0.28
+	env.glow_intensity = float(env_data.get("glow_intensity", 0.38))
 	environment.environment = env
 	add_child(environment)
 
-	var sun_data: Dictionary = config.get("environment", {}).get("sun", {})
+	var sun_data: Dictionary = env_data.get("sun", {})
 	var sun_position: Vector3 = _array_to_vec3(sun_data.get("position", [24000, 12000, -18000]))
 	var light := DirectionalLight3D.new()
 	light.look_at_from_position(sun_position.normalized() * -1000.0, Vector3.ZERO, Vector3.UP)
@@ -180,9 +188,9 @@ func _build_world() -> void:
 	add_child(camera)
 	_reset_camera()
 
-	_add_starfield(int(config.get("environment", {}).get("starfield_count", 260)))
-	_add_planet(config.get("environment", {}).get("planet", {}))
-	_add_asteroid_field(config.get("environment", {}).get("asteroid_field", {}))
+	_add_starfield(int(env_data.get("starfield_count", 260)))
+	_add_planet(env_data.get("planet", {}))
+	_add_asteroid_field(env_data.get("asteroid_field", {}))
 	_add_grid()
 	_build_hud()
 
@@ -391,6 +399,7 @@ func _refresh_hud() -> void:
 	]
 	target_label.text = _target_text()
 	_rebuild_weapon_buttons()
+	_update_ship_markers()
 
 
 func _target_text() -> String:
@@ -573,7 +582,10 @@ func _handle_left_click(screen_position: Vector2) -> void:
 			selected_ship.set_selected(true)
 			_log("Selected %s." % selected_ship.display_name)
 		else:
+			if target_ship != null:
+				target_ship.set_selected(false)
 			target_ship = clicked_ship
+			target_ship.set_selected(true)
 			_log("Target selected: %s." % TARGETING.detection_label(_detection_state(selected_ship, target_ship)))
 		return
 
@@ -625,6 +637,7 @@ func _reset_camera() -> void:
 	camera_distance = 9000.0
 	if selected_ship != null:
 		camera_target = selected_ship.global_position
+	_apply_opening_camera()
 
 
 func _check_battle_end() -> void:
@@ -738,7 +751,10 @@ func _finish_intro() -> void:
 		intro_overlay.queue_free()
 		intro_overlay = null
 	_log("SENSOR WARNING: UNKNOWN CONTACTS DETECTED")
-	_focus_selected_ship()
+	if bool(config.get("keep_opening_camera_after_intro", false)):
+		_apply_opening_camera()
+	else:
+		_focus_selected_ship()
 
 
 func _show_completion_overlay(final_result: Dictionary) -> void:
@@ -822,7 +838,7 @@ func _focus_selected_ship() -> void:
 		return
 	follow_selected = true
 	camera_target = selected_ship.global_position
-	camera_distance = max(2400.0, float(selected_ship.visual_length) * 8.0)
+	camera_distance = max(1800.0, float(selected_ship.visual_length) * 6.0)
 
 
 func _focus_target_ship() -> void:
@@ -832,6 +848,40 @@ func _focus_target_ship() -> void:
 	follow_selected = false
 	camera_target = target_ship.global_position
 	camera_distance = max(2600.0, float(target_ship.visual_length) * 7.0)
+
+
+func _apply_opening_camera() -> void:
+	var camera_data: Dictionary = config.get("opening_camera", {})
+	if camera_data.is_empty():
+		return
+	follow_selected = bool(camera_data.get("follow_selected", false))
+	camera_yaw = deg_to_rad(float(camera_data.get("yaw_degrees", 18.0)))
+	camera_pitch = deg_to_rad(float(camera_data.get("pitch_degrees", -30.0)))
+	camera_distance = float(camera_data.get("distance", 5200.0))
+	camera_target = _array_to_vec3(camera_data.get("target", [0, 0, -1800]))
+	if bool(camera_data.get("target_midpoint", false)) and selected_ship != null and target_ship != null:
+		camera_target = selected_ship.global_position.lerp(target_ship.global_position, 0.42)
+
+
+func _update_ship_markers() -> void:
+	if selected_ship == null:
+		return
+	for ship in player_ships:
+		if ship != null and ship.has_method("set_marker_text"):
+			ship.set_marker_text("FIRE WARSHIP", Color(0.35, 0.95, 1.0))
+	for enemy in enemy_ships:
+		if enemy == null or not enemy.has_method("set_marker_text"):
+			continue
+		var detection: int = _detection_state(selected_ship, enemy)
+		match detection:
+			TARGETING.DetectionState.SCANNED:
+				enemy.set_marker_text("%s\n%s" % [enemy.display_name.to_upper(), _format_distance(selected_ship.global_position.distance_to(enemy.global_position))], Color(1.0, 0.38, 0.24))
+			TARGETING.DetectionState.CLASSIFIED:
+				enemy.set_marker_text("HOSTILE %s\n%s" % [enemy.ship_class.to_upper(), _format_distance(selected_ship.global_position.distance_to(enemy.global_position))], Color(1.0, 0.62, 0.24))
+			TARGETING.DetectionState.CONTACT:
+				enemy.set_marker_text("UNKNOWN CONTACT\n%s" % _format_distance(selected_ship.global_position.distance_to(enemy.global_position)), Color(1.0, 0.86, 0.28))
+			_:
+				enemy.set_marker_text("SIGNAL\n%s" % _format_distance(selected_ship.global_position.distance_to(enemy.global_position)), Color(0.7, 0.7, 0.7))
 
 
 func _detection_state(observer: Variant, target: Variant) -> int:

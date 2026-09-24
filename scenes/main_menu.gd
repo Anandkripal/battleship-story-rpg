@@ -76,6 +76,7 @@ func _build_ui() -> void:
 	action_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	actions.add_child(action_spacer)
 
+	_add_button(actions, "Demo Battle", func() -> void: _singleton("GameEventManager").launch_battle({"battle_config": "demo_visible_battle"}))
 	_add_button(actions, "Start Demo Chapter", func() -> void: _singleton("EventRunner").start_demo_chapter())
 	_add_private_chapter_buttons(actions)
 	_add_button(actions, "Load Save", func() -> void: _singleton("EventRunner").continue_saved_game())

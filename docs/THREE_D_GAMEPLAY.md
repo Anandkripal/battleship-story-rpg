@@ -136,6 +136,8 @@ The `Scan` command manually promotes a selected target to `SCANNED` when it is i
 
 The playable trial uses a large planet, a directional sun, a starfield, visual asteroids, and kilometer-scale enemy contact placement.
 
+For quick testing from the main menu, use **Demo Battle**. It loads `demo_visible_battle`, skips the chapter system and cinematic delay, selects/scans the first enemy automatically, and starts with the Fire Warship and hostile contacts in frame.
+
 ## Ship Management
 
 `scenes/ship_management.tscn` shows the Fire Warship preview, equipped modules, costs, current stats, next-level stats, and an upgrade button. Upgrades call `GameEventManager.upgrade_fire_warship_module()`, deduct resources, update module levels, and save.
@@ -170,6 +172,7 @@ To add a future hull, add a new ship definition and reference it from an existin
 
 ```bash
 Godot --headless --path . --script res://tools/run_validation.gd
+Godot --headless --path . --script res://tools/smoke_demo_battle.gd
 Godot --headless --path . --script res://tools/smoke_battle_3d.gd
 Godot --headless --path . --script res://tools/smoke_battle_3d_performance.gd
 Godot --headless --path . --script res://tools/smoke_save_compat.gd

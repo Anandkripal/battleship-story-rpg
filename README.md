@@ -23,7 +23,7 @@ This keeps future chapter systems flexible. A later chapter can introduce scanni
 
 1. Open this folder in Godot 4.
 2. Run the project.
-3. Choose **Start Demo Chapter**.
+3. Choose **Demo Battle** for the standalone 3D combat demo, or **Start Demo Chapter** for the story/mechanic demo.
 
 The demo flow covers:
 
@@ -124,6 +124,7 @@ Headless smoke tests:
 ```bash
 Godot --headless --path . --script res://tools/run_validation.gd
 Godot --headless --path . --script res://tools/smoke_gameplay.gd
+Godot --headless --path . --script res://tools/smoke_demo_battle.gd
 Godot --headless --path . --script res://tools/smoke_battle_3d.gd
 Godot --headless --path . --script res://tools/smoke_battle_3d_performance.gd
 ```

@@ -1,4 +1,89 @@
 {
+  "demo_visible_battle": {
+    "display_name": "Standalone Demo Battle",
+    "battlefield_radius": 14000,
+    "auto_select_first_enemy": true,
+    "keep_opening_camera_after_intro": true,
+    "intro": {
+      "enabled": false
+    },
+    "opening_camera": {
+      "target_midpoint": true,
+      "follow_selected": false,
+      "yaw_degrees": 22,
+      "pitch_degrees": -28,
+      "distance": 6200
+    },
+    "environment": {
+      "starfield_count": 260,
+      "ambient_color": [0.16, 0.19, 0.28],
+      "ambient_energy": 1.05,
+      "glow_intensity": 0.48,
+      "planet": {
+        "visual_model": "distant_planet_quaternius",
+        "position": [-7200, -1600, -18000],
+        "radius": 4200,
+        "color": [0.22, 0.42, 0.82]
+      },
+      "sun": {
+        "position": [12000, 8500, -9000],
+        "color": [1.0, 0.86, 0.58],
+        "energy": 3.1
+      },
+      "asteroid_field": {
+        "count": 14,
+        "center": [3900, -160, -4400],
+        "spread": [3600, 700, 2300],
+        "visual_models": ["asteroid_rock_1", "asteroid_rock_2"]
+      }
+    },
+    "player_fleet": {
+      "faction": "player",
+      "ships": [
+        {
+          "id": "demo_player_fire_warship",
+          "definition": "fire_warship_mk1",
+          "display_name": "Fire Warship",
+          "position": [0, 0, 0],
+          "weapons": ["main_cannon_mk1", "secondary_cannon_mk1", "missile_mk1"],
+          "ai_profile": "player"
+        }
+      ]
+    },
+    "enemy_fleet": {
+      "faction": "enemy",
+      "ships": [
+        {
+          "id": "demo_frigate_01",
+          "definition": "enemy_frigate",
+          "display_name": "Demo Frigate",
+          "position": [1800, 60, -4400],
+          "weapons": ["enemy_pulse_cannon"],
+          "ai_profile": "aggressive",
+          "reward": {"source_points": 3, "materials": {"iron": 2}}
+        },
+        {
+          "id": "demo_frigate_02",
+          "definition": "enemy_frigate",
+          "display_name": "Wing Frigate",
+          "position": [-2300, 120, -5600],
+          "weapons": ["enemy_pulse_cannon"],
+          "ai_profile": "aggressive",
+          "reward": {"source_points": 3, "materials": {"copper": 1}}
+        },
+        {
+          "id": "demo_destroyer_01",
+          "definition": "enemy_destroyer",
+          "display_name": "Demo Destroyer",
+          "position": [760, -80, -7600],
+          "weapons": ["enemy_pulse_cannon", "missile_mk1"],
+          "ai_profile": "maintain_range",
+          "reward": {"source_points": 8, "materials": {"iron": 4, "titanium": 1}}
+        }
+      ]
+    },
+    "reward_multiplier": 1.0
+  },
   "prototype_fire_warship_trial": {
     "display_name": "Fire Warship Trial",
     "battlefield_radius": 28000,
