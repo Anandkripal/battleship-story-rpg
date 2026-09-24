@@ -1,0 +1,46 @@
+{
+  "basic_reactor": {
+    "name": "Basic Reactor",
+    "category": "reactor",
+    "stats": {
+      "reactor_output": 100
+    }
+  },
+  "basic_engine": {
+    "name": "Basic Engine",
+    "category": "engine",
+    "stats": {
+      "max_speed": 160,
+      "turning_rate": 5
+    }
+  },
+  "light_cannon": {
+    "name": "Light Cannon",
+    "category": "weapon",
+    "action": "main_cannon",
+    "stats": {
+      "damage": 18,
+      "range": 420,
+      "cooldown": 3.8,
+      "energy_cost": 18
+    }
+  },
+  "mining_laser": {
+    "name": "Mining Laser",
+    "category": "weapon",
+    "action": "mining_laser",
+    "stats": {
+      "damage": 10,
+      "range": 260,
+      "cooldown": 2.4,
+      "energy_cost": 10
+    }
+  },
+  "basic_scanner": {
+    "name": "Basic Scanner",
+    "category": "scanner",
+    "stats": {
+      "scanner_level": 1
+    }
+  }
+}

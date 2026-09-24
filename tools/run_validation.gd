@@ -5,6 +5,10 @@ const REQUIRED_FILES := [
 	"res://data/system_abilities.json",
 	"res://data/scan_targets.json",
 	"res://data/enemies.json",
+	"res://data/modules.json",
+	"res://data/sectors.json",
+	"res://data/encounters.json",
+	"res://data/loot_tables.json",
 	"res://data/upgrades.json",
 	"res://data/locations.json",
 	"res://data/mechanics.json",
@@ -28,6 +32,8 @@ func _init() -> void:
 			var scene_path: String = mechanics[mechanic_id].get("scene", "")
 			if scene_path.is_empty() or not FileAccess.file_exists(scene_path):
 				errors.append("Mechanic '%s' references a missing scene: %s" % [mechanic_id, scene_path])
+			elif load(scene_path) == null:
+				errors.append("Mechanic '%s' scene could not be loaded: %s" % [mechanic_id, scene_path])
 
 	if chapter is Dictionary:
 		_validate_chapter(chapter, mechanics if mechanics is Dictionary else {}, manifest if manifest is Dictionary else {}, errors)
@@ -207,6 +213,23 @@ func _validate_mechanic_params(event: Dictionary, event_id: String, errors: Arra
 			var enemies: Variant = _load_data_file("enemies.json", errors)
 			if enemy_id.is_empty() or not (enemies is Dictionary and enemies.has(enemy_id)):
 				errors.append("Event '%s' references missing enemy '%s'." % [event_id, enemy_id])
+		"exploration":
+			var sector_id: String = params.get("sector", "")
+			var sectors: Variant = _load_data_file("sectors.json", errors)
+			if sector_id.is_empty() or not (sectors is Dictionary and sectors.has(sector_id)):
+				errors.append("Event '%s' references missing sector '%s'." % [event_id, sector_id])
+			elif sectors is Dictionary:
+				var sector: Dictionary = sectors[sector_id]
+				var objective_node: String = params.get("objective_node", "")
+				if not objective_node.is_empty() and not sector.get("nodes", {}).has(objective_node):
+					errors.append("Event '%s' references missing sector node '%s'." % [event_id, objective_node])
+		"loadout":
+			var modules: Variant = _load_data_file("modules.json", errors)
+			for entry in params.get("available_modules", []):
+				if entry is Dictionary:
+					var module_id: String = entry.get("module", "")
+					if module_id.is_empty() or not (modules is Dictionary and modules.has(module_id)):
+						errors.append("Event '%s' references missing module '%s'." % [event_id, module_id])
 
 
 func _validate_continue_event(event: Dictionary, event_id: String, continue_chapter: String, errors: Array[String]) -> void:

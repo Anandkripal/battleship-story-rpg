@@ -11,12 +11,20 @@
 		"scene": "res://mechanics/battle/battle.tscn",
 		"description": "Semi-turn-based ship battle with data-driven actions."
 	},
-	"upgrade": {
-		"scene": "res://mechanics/upgrade/upgrade.tscn",
-		"description": "Data-driven upgrade picker."
-	},
-	"map": {
-		"scene": "res://scenes/star_map.tscn",
-		"description": "Data-driven location selection screen."
-	}
+  "upgrade": {
+    "scene": "res://mechanics/upgrade/upgrade.tscn",
+    "description": "Data-driven upgrade picker."
+  },
+  "exploration": {
+    "scene": "res://mechanics/exploration/exploration.tscn",
+    "description": "Data-driven sector exploration with travel, objectives, optional encounters, repairs, and rewards."
+  },
+  "loadout": {
+    "scene": "res://mechanics/loadout/loadout.tscn",
+    "description": "Data-driven ship module inspection and simple module installation."
+  },
+  "map": {
+    "scene": "res://scenes/star_map.tscn",
+    "description": "Data-driven location selection screen."
+  }
 }

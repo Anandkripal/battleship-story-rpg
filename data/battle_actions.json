@@ -1,16 +1,32 @@
 {
-	"main_cannon": {
-		"name": "Main Cannon",
-		"type": "attack",
-		"damage": 18
-	},
-	"missile_launcher": {
-		"name": "Missile Launcher",
-		"type": "attack",
-		"damage": 28
-	},
-	"defend": {
-		"name": "Defend",
-		"type": "defense"
-	}
+  "main_cannon": {
+    "name": "Main Cannon",
+    "type": "attack",
+    "damage": 18,
+    "range": 420,
+    "cooldown": 3.8,
+    "energy_cost": 18
+  },
+  "missile_launcher": {
+    "name": "Missile Launcher",
+    "type": "attack",
+    "damage": 28,
+    "range": 760,
+    "cooldown": 7.5,
+    "energy_cost": 28
+  },
+  "mining_laser": {
+    "name": "Mining Laser",
+    "type": "attack",
+    "damage": 10,
+    "range": 260,
+    "cooldown": 2.4,
+    "energy_cost": 10
+  },
+  "defend": {
+    "name": "Defend",
+    "type": "defense",
+    "cooldown": 5.0,
+    "energy_cost": 8
+  }
 }

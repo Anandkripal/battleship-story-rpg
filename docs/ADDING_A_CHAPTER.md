@@ -28,6 +28,20 @@ Public demo chapters live in `chapters/demo/`. Private/local chapters should liv
 - Use state paths for flexible progression.
 - Reference assets by manifest ID when possible.
 - Use `chapter_boundary` when a chapter file ends but the story may continue immediately.
+- Prefer gameplay objectives over page-by-page adaptation. Important source scenes can be cinematic story beats, while travel, preparation, mining, battle, salvage, repair, and upgrades should happen through reusable mechanics.
+
+## Story As Campaign Backbone
+
+Serialized chapters are source-material boundaries, not always gameplay boundaries. A story arc may span several chapter files:
+
+```json
+{
+  "arc_id": "early_mining_conflict",
+  "source_chapters": ["ch003", "ch004", "ch005"]
+}
+```
+
+Use story events to unlock objectives, sectors, encounters, modules, or abilities. Then send the player into mechanics such as `exploration`, `battle`, `mining`, `scan`, or `loadout` so the player acts inside the campaign instead of only clicking through dialogue.
 
 ## Chapter Boundaries
 

@@ -77,15 +77,7 @@ func _build_ui() -> void:
 	actions.add_child(action_spacer)
 
 	_add_button(actions, "Start Demo Chapter", func() -> void: _singleton("EventRunner").start_demo_chapter())
-	if FileAccess.file_exists("res://chapters/private/chapter_001.json"):
-		_add_button(actions, "Private Chapter 1", func() -> void: _singleton("EventRunner").start_chapter("res://chapters/private/chapter_001.json"))
-	if FileAccess.file_exists("res://chapters/private/chapter_002.json"):
-		var chapter_2_unlocked: bool = _singleton("SaveManager").saved_chapter_completed("private:chapter_001")
-		var chapter_2_button := _add_button(actions, "Private Chapter 2", func() -> void: _singleton("EventRunner").start_chapter("res://chapters/private/chapter_002.json"))
-		chapter_2_button.disabled = not chapter_2_unlocked
-		if not chapter_2_unlocked:
-			chapter_2_button.text = "Private Chapter 2 (Locked)"
-			_add_button(actions, "Private Chapter 2 (Dev)", func() -> void: _singleton("EventRunner").start_chapter("res://chapters/private/chapter_002.json"))
+	_add_private_chapter_buttons(actions)
 	_add_button(actions, "Load Save", func() -> void: _singleton("EventRunner").continue_saved_game())
 	_add_button(actions, "System Abilities", func() -> void: _singleton("UIManager").show_scene("res://scenes/system_screen.tscn"))
 	_add_button(actions, "Validate Project", _show_validation)
@@ -103,6 +95,22 @@ func _add_button(parent: VBoxContainer, text: String, target: Callable) -> Butto
 	button.pressed.connect(target)
 	parent.add_child(button)
 	return button
+
+
+func _add_private_chapter_buttons(actions: VBoxContainer) -> void:
+	for chapter_number in range(1, 6):
+		var chapter_path: String = "res://chapters/private/chapter_%03d.json" % chapter_number
+		if not FileAccess.file_exists(chapter_path):
+			continue
+		var chapter_id: String = "private:chapter_%03d" % chapter_number
+		var previous_id: String = "private:chapter_%03d" % (chapter_number - 1)
+		var unlocked: bool = chapter_number == 1 or _singleton("SaveManager").saved_chapter_completed(previous_id)
+		var label: String = "Private Chapter %s" % chapter_number
+		var button := _add_button(actions, label, func() -> void: _singleton("EventRunner").start_chapter(chapter_path))
+		button.disabled = not unlocked
+		if not unlocked:
+			button.text = "%s (Locked)" % label
+			_add_button(actions, "%s (Dev)" % label, func() -> void: _singleton("EventRunner").start_chapter(chapter_path))
 
 
 func _show_validation() -> void:

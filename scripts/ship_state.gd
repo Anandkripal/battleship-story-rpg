@@ -20,18 +20,33 @@ func reset() -> void:
 			"hull": 100,
 			"hull_max": 100,
 			"armor": 50,
+			"armor_max": 50,
+			"shield": 0,
+			"shield_max": 0,
+			"reactor_output": 100,
+			"energy_engines": 30,
+			"energy_shields": 20,
+			"energy_weapons": 50,
 			"engine_speed": 10,
 			"scanner_level": 1
 		},
 		"modules": {
+			"reactor": {
+				"id": "basic_reactor",
+				"level": 1
+			},
 			"engine": {
 				"id": "basic_engine",
 				"level": 1
 			},
-			"weapon": {
+			"main_weapon": {
 				"id": "light_cannon",
 				"level": 1,
 				"action": "main_cannon"
+			},
+			"scanner": {
+				"id": "basic_scanner",
+				"level": 1
 			}
 		},
 		"abilities": [

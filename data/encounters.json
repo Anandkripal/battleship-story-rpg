@@ -1,0 +1,11 @@
+{
+  "training_cache": {
+    "name": "Training Cache",
+    "type": "salvage",
+    "description": "A harmless supply cache used by trainee pilots.",
+    "rewards": {
+      "credits": 10
+    },
+    "changes": []
+  }
+}

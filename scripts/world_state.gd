@@ -20,7 +20,15 @@ func reset() -> void:
 		"current_location": "training_planet",
 		"world_flags": shared_flags,
 		"flags": shared_flags,
-		"discovered_technologies": {}
+		"discovered_technologies": {},
+		"exploration": {
+			"current_sector": "",
+			"current_node": "",
+			"visited_nodes": [],
+			"completed_encounters": {}
+		},
+		"objectives": {},
+		"active_arc": ""
 	}
 
 

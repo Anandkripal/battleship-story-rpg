@@ -3,19 +3,25 @@
 		"name": "Training Drone",
 		"type": "Drone",
 		"rating": "F",
-		"stats": {
-			"hull": 45,
-			"armor": 8
-		},
-		"attack": {
-			"name": "Pulse Beam",
-			"damage": 9
-		},
-		"rewards": {
-			"resources": {
-				"credits": 35,
-				"source_points": 2
-			}
-		}
-	}
+    "stats": {
+      "hull": 45,
+      "armor": 8,
+      "shield": 0,
+      "max_speed": 95
+    },
+    "ai_profile": "aggressive",
+    "weapons": ["main_cannon"],
+    "attack": {
+      "name": "Pulse Beam",
+      "damage": 9
+    },
+    "rewards": {
+      "resources": {
+        "credits": 35,
+        "source_points": 2,
+        "alloys": 1
+      },
+      "loot_table": "training_salvage"
+    }
+  }
 }

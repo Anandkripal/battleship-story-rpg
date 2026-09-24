@@ -1,0 +1,9 @@
+{
+  "training_salvage": {
+    "name": "Training Salvage",
+    "drops": {
+      "credits": 15,
+      "alloys": 1
+    }
+  }
+}

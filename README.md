@@ -10,7 +10,7 @@ Screenshots will be added after the visual direction is further developed.
 
 The game is built around chapters made of generic events. Story, choices, rewards, state changes, conditionals, jumps, chapter boundaries, and endings are handled by `EventRunner`. Gameplay systems are separate mechanics registered by string ID through `MechanicRegistry`.
 
-This keeps future chapter systems flexible. A later chapter can introduce scanning, fleet combat, auctions, research, territory management, diplomacy, dimensional travel, or something not known yet without redesigning save data or rewriting the event runner.
+This keeps future chapter systems flexible. A later chapter can introduce scanning, exploration, tactical combat, fleet combat, auctions, research, territory management, diplomacy, dimensional travel, or something not known yet without redesigning save data or rewriting the event runner.
 
 ## Godot Version
 
@@ -44,6 +44,19 @@ The story viewer supports landscape layouts such as `bottom_dialogue`, `side_dia
 - `UIManager` swaps scenes and shared UI flows.
 - `ValidationManager` checks JSON, events, mechanics, assets, state paths, and scene references.
 
+## Gameplay Loop
+
+The project now supports a fuller campaign loop:
+
+`Campaign Story -> Exploration -> Combat/Mining/Scan -> Rewards/Salvage -> Repair/Loadout -> Progression`
+
+Reusable gameplay systems include:
+
+- `exploration`: data-driven sector nodes, connections, objective destinations, optional encounters, repair nodes, and resources.
+- `battle`: real-time tactical combat with click-to-move, weapon ranges, cooldowns, energy allocation, obstacles, AI profiles, and salvage.
+- `loadout`: module inspection and simple module installation from `data/modules.json`.
+- `scan`, `mining`, `upgrade`, and `map`: supporting mechanics for tutorial and progression beats.
+
 ## Chapter/Event Format
 
 Chapters live in `chapters/demo/`. A mechanic event looks like:
@@ -73,6 +86,9 @@ See `docs/ADDING_A_MECHANIC.md`.
 - Locations: edit `data/locations.json`.
 - System abilities: edit `data/system_abilities.json`.
 - Upgrades: edit `data/upgrades.json`.
+- Modules: edit `data/modules.json` or add private overrides in `data/private/modules.local.json`.
+- Sectors and encounters: edit `data/sectors.json` / `data/encounters.json` or use local overrides.
+- Loot tables: edit `data/loot_tables.json`.
 - Battle actions: edit `data/battle_actions.json` and reference them from ship abilities/modules.
 
 The UI builds from data where practical; it does not hardcode ability buttons or upgrade categories.
@@ -120,3 +136,5 @@ Generate placeholder local entries with:
 ```bash
 python tools/build_asset_manifest.py assets/private/ch01
 ```
+
+Private Chapter 1-2 assets in this local project use legacy IDs like `ch01_001`; newer private chapters may use source-chapter IDs like `ch003_001`.

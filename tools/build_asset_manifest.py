@@ -22,6 +22,13 @@ def slug(value: str) -> str:
     return value.strip("_") or "image"
 
 
+def default_prefix(directory_name: str) -> str:
+    match = re.fullmatch(r"chapter_(\d+)", directory_name.lower())
+    if match:
+        return f"ch{int(match.group(1)):03d}"
+    return slug(directory_name)
+
+
 def res_path(path: Path) -> str:
     return "res://" + path.as_posix()
 
@@ -44,7 +51,7 @@ def main() -> int:
         return 2
 
     existing = load_existing()
-    prefix = slug(scan_dir.name)
+    prefix = default_prefix(scan_dir.name)
 
     for image_path in sorted(scan_dir.rglob("*")):
         if image_path.suffix.lower() not in IMAGE_EXTENSIONS:

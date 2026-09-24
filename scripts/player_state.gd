@@ -14,7 +14,9 @@ func reset() -> void:
 	state = {
 		"resources": {
 			"credits": 100,
-			"source_points": 5
+			"source_points": 5,
+			"ore": 0,
+			"alloys": 0
 		},
 		"stats": {
 			"physical_fitness": 1,

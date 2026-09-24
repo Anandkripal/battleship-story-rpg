@@ -1,0 +1,22 @@
+{
+  "training_sector": {
+    "name": "Training Sector",
+    "start_node": "training_planet",
+    "nodes": {
+      "training_planet": {
+        "name": "Training Planet",
+        "type": "planet",
+        "position": [220, 340],
+        "connections": ["asteroid_field"],
+        "description": "Safe local space for basic command training."
+      },
+      "asteroid_field": {
+        "name": "Asteroid Field",
+        "type": "resource_zone",
+        "position": [620, 300],
+        "connections": ["training_planet"],
+        "description": "Practice rocks and low-value ore signatures."
+      }
+    }
+  }
+}

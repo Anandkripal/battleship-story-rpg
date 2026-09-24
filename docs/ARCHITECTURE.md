@@ -25,6 +25,21 @@ It does not branch on specific gameplay systems such as scan, mining, battle, or
 
 `MechanicRegistry` loads `data/mechanics.json` and maps mechanic IDs to scenes. A mechanic scene extends `BaseMechanic`, implements `start(params)`, and emits `completed(result)`.
 
+## Gameplay Loop
+
+The campaign is intended to unlock gameplay instead of replacing gameplay. A chapter can move through:
+
+`campaign story -> exploration -> encounter/combat/mining -> rewards/salvage -> repairs/loadout -> next story beat`
+
+The current reusable gameplay layers are:
+
+- `exploration`: sector navigation with connected nodes, optional encounters, repairs, and objective destinations.
+- `battle`: real-time tactical ship combat with click-to-move, target range, cooldowns, energy distribution, simple obstacles, deterministic AI profiles, and salvage rewards.
+- `loadout`: data-driven module inspection and simple module installation.
+- `mining`, `scan`, `upgrade`, and `map`: earlier mechanics that remain available for chapters and tutorials.
+
+Combat state is explicit and data-driven where practical: ships use stable IDs, modules reference action IDs, enemy behavior comes from `ai_profile`, and battle rewards can come from enemy data plus loot tables. This keeps the single-player prototype easier to evolve toward future fleet or multiplayer systems without coupling the simulation to one chapter.
+
 ## Dynamic State
 
 State is dictionary-based:
@@ -49,6 +64,10 @@ The public demo uses JSON files in `data/`:
 - `scan_targets.json`
 - `battle_actions.json`
 - `enemies.json`
+- `modules.json`
+- `sectors.json`
+- `encounters.json`
+- `loot_tables.json`
 - `upgrades.json`
 - `locations.json`
 - `mechanics.json`
