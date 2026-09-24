@@ -30,6 +30,14 @@ func _run() -> void:
 		errors.append("Demo camera starts too far away.")
 	if battle.get("intro_active"):
 		errors.append("Demo battle should skip the cinematic intro.")
+	if battle.get("target_box") == null:
+		errors.append("Demo battle did not build a target button list.")
+	elif battle.get("target_box").get_child_count() < 4:
+		errors.append("Expected target title plus 3 enemy target buttons.")
+	if battle.get("command_box") == null:
+		errors.append("Demo battle did not build command grid.")
+	elif battle.get("command_box").get_child_count() < 8:
+		errors.append("Expected all command buttons in compact command grid.")
 	if _count_loaded_optional_models(battle) > 0:
 		errors.append("Demo battle loaded optional model assets instead of fast fallback visuals.")
 	if _count_nodes_of_type(battle, "GPUParticles3D") > 0:
@@ -43,6 +51,9 @@ func _run() -> void:
 			errors.append("Player ship is outside the opening camera frustum.")
 		if not camera.is_position_in_frustum(target_ship.global_position):
 			errors.append("Selected target is outside the opening camera frustum.")
+	var hud_width: float = _largest_control_right_edge(battle)
+	if hud_width > 1280.0:
+		errors.append("HUD extends beyond 1280px viewport: %.1f." % hud_width)
 
 	var elapsed_msec: int = Time.get_ticks_msec() - start_msec
 	if elapsed_msec > 3000:
@@ -76,3 +87,13 @@ func _count_nodes_of_type(node: Node, type_name: String) -> int:
 	for child in node.get_children():
 		count += _count_nodes_of_type(child, type_name)
 	return count
+
+
+func _largest_control_right_edge(node: Node) -> float:
+	var value := 0.0
+	if node is Control:
+		var control := node as Control
+		value = max(value, control.global_position.x + control.size.x)
+	for child in node.get_children():
+		value = max(value, _largest_control_right_edge(child))
+	return value

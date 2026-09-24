@@ -36,7 +36,8 @@ var player_label: Label
 var target_label: Label
 var log_label: Label
 var weapon_box: VBoxContainer
-var command_box: HBoxContainer
+var target_box: VBoxContainer
+var command_box: GridContainer
 var result: Dictionary = {}
 var battle_started := false
 var battle_ended := false
@@ -315,22 +316,22 @@ func _build_hud() -> void:
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 18)
-	margin.add_theme_constant_override("margin_right", 18)
-	margin.add_theme_constant_override("margin_top", 14)
-	margin.add_theme_constant_override("margin_bottom", 14)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
 	root.add_child(margin)
 
 	var layout := VBoxContainer.new()
-	layout.add_theme_constant_override("separation", 8)
+	layout.add_theme_constant_override("separation", 6)
 	margin.add_child(layout)
 
 	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 14)
+	top.add_theme_constant_override("separation", 10)
 	layout.add_child(top)
 
 	player_label = _hud_label()
-	player_label.custom_minimum_size = Vector2(350, 130)
+	player_label.custom_minimum_size = Vector2(330, 116)
 	top.add_child(player_label)
 
 	var spacer := Control.new()
@@ -338,7 +339,7 @@ func _build_hud() -> void:
 	top.add_child(spacer)
 
 	target_label = _hud_label()
-	target_label.custom_minimum_size = Vector2(390, 150)
+	target_label.custom_minimum_size = Vector2(360, 128)
 	top.add_child(target_label)
 
 	var lower_spacer := Control.new()
@@ -346,20 +347,29 @@ func _build_hud() -> void:
 	layout.add_child(lower_spacer)
 
 	var bottom := HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 14)
+	bottom.add_theme_constant_override("separation", 8)
 	layout.add_child(bottom)
 
 	weapon_box = VBoxContainer.new()
-	weapon_box.add_theme_constant_override("separation", 8)
+	weapon_box.custom_minimum_size = Vector2(210, 0)
+	weapon_box.add_theme_constant_override("separation", 6)
 	bottom.add_child(weapon_box)
 
-	command_box = HBoxContainer.new()
-	command_box.add_theme_constant_override("separation", 8)
+	target_box = VBoxContainer.new()
+	target_box.custom_minimum_size = Vector2(225, 0)
+	target_box.add_theme_constant_override("separation", 5)
+	bottom.add_child(target_box)
+
+	command_box = GridContainer.new()
+	command_box.columns = 4
+	command_box.custom_minimum_size = Vector2(440, 0)
+	command_box.add_theme_constant_override("h_separation", 6)
+	command_box.add_theme_constant_override("v_separation", 6)
 	command_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bottom.add_child(command_box)
 
 	log_label = _hud_label()
-	log_label.custom_minimum_size = Vector2(320, 110)
+	log_label.custom_minimum_size = Vector2(230, 104)
 	bottom.add_child(log_label)
 
 	_build_command_buttons()
@@ -401,6 +411,7 @@ func _refresh_hud() -> void:
 	]
 	target_label.text = _target_text()
 	_rebuild_weapon_buttons()
+	_rebuild_target_buttons()
 	_update_ship_markers()
 
 
@@ -441,25 +452,56 @@ func _rebuild_weapon_buttons() -> void:
 			weapon.get("display_name", weapon_id),
 			status_text
 		]
-		button.custom_minimum_size = Vector2(245, 64)
-		button.add_theme_font_size_override("font_size", 18)
+		button.custom_minimum_size = Vector2(210, 52)
+		button.add_theme_font_size_override("font_size", 15)
 		button.disabled = target_ship == null or not selected_ship.can_fire(index, target_ship)
 		button.pressed.connect(func() -> void: _fire_selected_weapon(index))
 		weapon_box.add_child(button)
 
 
+func _rebuild_target_buttons() -> void:
+	for child in target_box.get_children():
+		child.queue_free()
+	var title := Label.new()
+	title.text = "TARGETS"
+	title.add_theme_font_size_override("font_size", 15)
+	target_box.add_child(title)
+	for enemy in enemy_ships:
+		if enemy == null or enemy.destroyed_flag:
+			continue
+		var button := Button.new()
+		button.text = _target_button_text(enemy)
+		button.custom_minimum_size = Vector2(210, 42)
+		button.add_theme_font_size_override("font_size", 14)
+		button.pressed.connect(func() -> void: _select_target(enemy))
+		target_box.add_child(button)
+
+
+func _target_button_text(enemy: Variant) -> String:
+	var prefix := "> " if enemy == target_ship else ""
+	var distance_text: String = _format_distance(selected_ship.global_position.distance_to(enemy.global_position)) if selected_ship != null else ""
+	var detection: int = _detection_state(selected_ship, enemy)
+	match detection:
+		TARGETING.DetectionState.SCANNED:
+			return "%s%s\n%s" % [prefix, enemy.display_name, distance_text]
+		TARGETING.DetectionState.CLASSIFIED:
+			return "%sHostile %s\n%s" % [prefix, enemy.ship_class.capitalize(), distance_text]
+		_:
+			return "%sUnknown Contact\n%s" % [prefix, distance_text]
+
+
 func _add_command_button(text: String, callback: Callable) -> void:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(105, 56)
-	button.add_theme_font_size_override("font_size", 18)
+	button.custom_minimum_size = Vector2(104, 46)
+	button.add_theme_font_size_override("font_size", 15)
 	button.pressed.connect(callback)
 	command_box.add_child(button)
 
 
 func _hud_label() -> Label:
 	var label := Label.new()
-	label.add_theme_font_size_override("font_size", 19)
+	label.add_theme_font_size_override("font_size", 16)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
 
@@ -578,6 +620,17 @@ func _activate_emergency_repair() -> void:
 	_log("Emergency repair restored %.0f hull." % repaired)
 
 
+func _select_target(new_target: Variant) -> void:
+	if new_target == null or new_target.destroyed_flag:
+		return
+	if target_ship != null and target_ship != new_target:
+		target_ship.set_selected(false)
+	target_ship = new_target
+	target_ship.set_selected(true)
+	_log("Target selected: %s." % TARGETING.detection_label(_detection_state(selected_ship, target_ship)))
+	_refresh_hud()
+
+
 func _handle_left_click(screen_position: Vector2) -> void:
 	var clicked_ship: Variant = _ship_at_screen_position(screen_position)
 	if clicked_ship != null:
@@ -588,11 +641,7 @@ func _handle_left_click(screen_position: Vector2) -> void:
 			selected_ship.set_selected(true)
 			_log("Selected %s." % selected_ship.display_name)
 		else:
-			if target_ship != null:
-				target_ship.set_selected(false)
-			target_ship = clicked_ship
-			target_ship.set_selected(true)
-			_log("Target selected: %s." % TARGETING.detection_label(_detection_state(selected_ship, target_ship)))
+			_select_target(clicked_ship)
 		return
 
 	var point := _screen_to_battle_plane(screen_position)
@@ -607,9 +656,11 @@ func _ship_at_screen_position(screen_position: Vector2) -> Variant:
 	for ship in player_ships + enemy_ships:
 		if ship.destroyed_flag:
 			continue
+		if not camera.is_position_in_frustum(ship.global_position):
+			continue
 		var projected := camera.unproject_position(ship.global_position)
 		var distance := projected.distance_to(screen_position)
-		var pick_radius: float = max(42.0, float(ship.collision_radius) * 0.18)
+		var pick_radius: float = max(70.0, float(ship.collision_radius) * 0.42)
 		if distance < best_distance and distance < pick_radius:
 			best_distance = distance
 			best_ship = ship
