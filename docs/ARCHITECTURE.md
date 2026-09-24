@@ -14,9 +14,12 @@ This project is designed for story-first progression with mechanics that can gro
 - `state_change`
 - `conditional`
 - `jump`
+- `chapter_boundary`
 - `end`
 
 It does not branch on specific gameplay systems such as scan, mining, battle, or research. For `kind: "mechanic"`, it calls `MechanicRegistry.run_mechanic(mechanic_id, params)`.
+
+`chapter_boundary` is used when a serialized chapter ends but the gameplay flow may or may not pause. It can mark the current chapter complete, autosave, show or skip the completion screen, and optionally continue into another chapter/event. This lets a cliffhanger, battle, chase, or conversation continue across chapter files without forcing rewards, upgrades, or menu resets.
 
 ## Mechanic Registry
 

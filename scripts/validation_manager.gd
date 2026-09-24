@@ -134,6 +134,17 @@ func _validate_event(event: Dictionary, ids: Dictionary, mechanics: Dictionary, 
 		_check_ref(event.get("true_next", ""), event_id, ids, errors)
 		_check_ref(event.get("false_next", ""), event_id, ids, errors)
 
+	if kind == "chapter_boundary":
+		for change in event.get("changes", []):
+			if change is Dictionary:
+				_validate_state_path(change.get("path", ""), event_id, errors)
+		var continue_chapter: String = event.get("continue_chapter", "")
+		if not continue_chapter.is_empty():
+			if not FileAccess.file_exists(continue_chapter):
+				errors.append("Event '%s' continues to missing chapter '%s'." % [event_id, continue_chapter])
+			else:
+				_validate_continue_event(event, event_id, continue_chapter, errors)
+
 	_check_ref(event.get("next", ""), event_id, ids, errors)
 
 	for choice in event.get("choices", []):
@@ -172,6 +183,24 @@ func _validate_mechanic_params(event: Dictionary, event_id: String, errors: Arra
 			var enemies: Variant = _singleton("DataManager").load_data_file("enemies.json", {})
 			if enemy_id.is_empty() or not (enemies is Dictionary and enemies.has(enemy_id)):
 				errors.append("Event '%s' references missing enemy '%s'." % [event_id, enemy_id])
+
+
+func _validate_continue_event(event: Dictionary, event_id: String, continue_chapter: String, errors: Array) -> void:
+	var continue_event: String = event.get("continue_event", "")
+	if continue_event.is_empty():
+		return
+
+	var next_chapter: Variant = _load_json_checked(continue_chapter, errors)
+	if not (next_chapter is Dictionary):
+		return
+
+	var found := false
+	for next_event in next_chapter.get("events", []):
+		if next_event is Dictionary and next_event.get("id", "") == continue_event:
+			found = true
+			break
+	if not found:
+		errors.append("Event '%s' continues to missing event '%s' in '%s'." % [event_id, continue_event, continue_chapter])
 
 
 func _check_ref(next_id: String, event_id: String, ids: Dictionary, errors: Array) -> void:

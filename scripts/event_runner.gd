@@ -74,20 +74,10 @@ func process_event(event: Dictionary) -> String:
 			return event.get("true_next" if passed else "false_next", "")
 		"jump":
 			return event.get("next", "")
+		"chapter_boundary":
+			return await _process_chapter_boundary(event)
 		"end":
-			_singleton("StatePathUtil").apply_changes(event.get("changes", []))
-			var chapter_id: String = _singleton("ChapterManager").current_chapter.get("id", _singleton("ChapterManager").current_chapter_path)
-			if not chapter_id.is_empty():
-				_singleton("StatePathUtil").apply_change({
-					"path": "player.progress.completed_chapters.%s" % chapter_id,
-					"operation": "set",
-					"value": true
-				})
-			_singleton("SaveManager").save_game()
-			await _singleton("UIManager").show_chapter_complete({
-				"title": event.get("title", "Chapter Complete"),
-				"text": event.get("text", "The chapter is complete.")
-			})
+			await _complete_current_chapter(event, true)
 			return ""
 		_:
 			push_error("Unknown event kind '%s' in event '%s'." % [kind, event.get("id", "<missing id>")])
@@ -103,6 +93,47 @@ func _run_mechanic_event(event: Dictionary) -> String:
 	if result.has("next"):
 		return result["next"]
 	return event.get("next", "")
+
+
+func _process_chapter_boundary(event: Dictionary) -> String:
+	var show_completion: bool = event.get("show_completion", true)
+	await _complete_current_chapter(event, show_completion)
+
+	var continue_chapter_path: String = event.get("continue_chapter", "")
+	if not continue_chapter_path.is_empty():
+		if not _singleton("ChapterManager").load_chapter(continue_chapter_path):
+			push_error("Could not continue to chapter: %s" % continue_chapter_path)
+			return ""
+		var continue_event: String = event.get("continue_event", "")
+		if not continue_event.is_empty():
+			_singleton("ChapterManager").set_current_event(continue_event)
+		if event.get("autosave", true):
+			_singleton("SaveManager").save_game()
+		await continue_chapter()
+		return ""
+
+	return event.get("next", "")
+
+
+func _complete_current_chapter(event: Dictionary, show_completion: bool) -> void:
+	_singleton("StatePathUtil").apply_changes(event.get("changes", []))
+	if event.get("mark_complete", true):
+		var chapter_id: String = _singleton("ChapterManager").current_chapter.get("id", _singleton("ChapterManager").current_chapter_path)
+		if not chapter_id.is_empty():
+			_singleton("StatePathUtil").apply_change({
+				"path": "player.progress.completed_chapters.%s" % chapter_id,
+				"operation": "set",
+				"value": true
+			})
+
+	if event.get("autosave", true):
+		_singleton("SaveManager").save_game()
+
+	if show_completion:
+		await _singleton("UIManager").show_chapter_complete({
+			"title": event.get("title", "Chapter Complete"),
+			"text": event.get("text", "The chapter is complete.")
+		})
 
 
 func _apply_mechanic_result(result: Dictionary) -> void:

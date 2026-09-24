@@ -8,7 +8,7 @@ Screenshots will be added after the visual direction is further developed.
 
 ## Project Overview
 
-The game is built around chapters made of generic events. Story, choices, rewards, state changes, conditionals, jumps, and endings are handled by `EventRunner`. Gameplay systems are separate mechanics registered by string ID through `MechanicRegistry`.
+The game is built around chapters made of generic events. Story, choices, rewards, state changes, conditionals, jumps, chapter boundaries, and endings are handled by `EventRunner`. Gameplay systems are separate mechanics registered by string ID through `MechanicRegistry`.
 
 This keeps future chapter systems flexible. A later chapter can introduce scanning, fleet combat, auctions, research, territory management, diplomacy, dimensional travel, or something not known yet without redesigning save data or rewriting the event runner.
 
@@ -89,6 +89,8 @@ Saves are written to `user://savegame.json` and include:
 - dynamic resources, flags, inventory, relationships, and unlocks
 
 Autosaves happen after mechanics, rewards, chapter progression, and menu-related save points.
+
+Chapter files may end with `kind: "chapter_boundary"` when a serialized scene should continue across chapter files. The boundary can show or skip the completion screen, mark the chapter complete, autosave, and optionally continue into a specific event in the next chapter.
 
 ## Validation
 
