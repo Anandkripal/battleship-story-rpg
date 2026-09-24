@@ -6,6 +6,7 @@ var weapon: Dictionary = {}
 var speed: float = 120.0
 var life: float = 8.0
 var hit_radius: float = 7.0
+var velocity: Vector3 = Vector3.ZERO
 
 
 func setup(new_source: Variant, new_target: Variant, new_weapon: Dictionary) -> void:
@@ -14,6 +15,9 @@ func setup(new_source: Variant, new_target: Variant, new_weapon: Dictionary) -> 
 	weapon = new_weapon.duplicate(true)
 	speed = float(weapon.get("projectile_speed", 120))
 	hit_radius = max(24.0, float(target.collision_radius) * 0.42) if target != null else hit_radius
+	var direction: Vector3 = weapon.get("launch_direction", Vector3.FORWARD)
+	var source_velocity: Vector3 = weapon.get("source_velocity", Vector3.ZERO)
+	velocity = source_velocity + direction.normalized() * speed
 	_build_visual()
 
 
@@ -22,10 +26,9 @@ func _process(delta: float) -> void:
 	if life <= 0.0 or target == null or target.destroyed_flag:
 		queue_free()
 		return
-	var direction: Vector3 = (target.global_position - global_position).normalized()
-	global_position += direction * speed * delta
-	if direction.length() > 0.0:
-		look_at(global_position + direction, Vector3.UP)
+	global_position += velocity * delta
+	if velocity.length() > 0.0:
+		look_at(global_position + velocity.normalized(), Vector3.UP)
 	if global_position.distance_to(target.global_position) <= hit_radius:
 		target.apply_damage(float(weapon.get("damage", 0)), source)
 		_spawn_hit_flash()

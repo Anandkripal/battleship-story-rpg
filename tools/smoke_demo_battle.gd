@@ -52,6 +52,19 @@ func _run() -> void:
 	var camera: Camera3D = battle.get("camera")
 	var selected_ship: Variant = battle.get("selected_ship")
 	var target_ship: Variant = battle.get("target_ship")
+	if selected_ship != null:
+		if not bool(selected_ship.get("direct_control_enabled")):
+			errors.append("Demo battle should start with direct player flight enabled.")
+		var start_position: Vector3 = selected_ship.global_position
+		selected_ship.set_manual_input(Vector3(0, 0, 1), Vector3.ZERO, false)
+		for index in range(12):
+			selected_ship.tick(1.0 / 60.0)
+		if selected_ship.velocity.length() <= 0.1:
+			errors.append("Manual thrust did not accelerate the player ship.")
+		if selected_ship.global_position.distance_to(start_position) <= 0.1:
+			errors.append("Manual thrust did not move the player ship.")
+	if not InputMap.has_action("fire_main_weapon") or not InputMap.has_action("flight_forward"):
+		errors.append("Demo battle input actions were not registered.")
 	if camera != null and selected_ship != null and target_ship != null:
 		if not camera.is_position_in_frustum(selected_ship.global_position):
 			errors.append("Player ship is outside the opening camera frustum.")

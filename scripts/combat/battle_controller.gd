@@ -11,6 +11,34 @@ const WEAPONS := preload("res://scripts/combat/weapon_system.gd")
 const AI := preload("res://scripts/combat/combat_ai.gd")
 const MODEL_CATALOG := preload("res://scripts/combat/model_catalog.gd")
 
+const INPUT_ACTIONS: Dictionary = {
+	"flight_forward": [KEY_W],
+	"flight_reverse": [KEY_S],
+	"flight_strafe_left": [KEY_A],
+	"flight_strafe_right": [KEY_D],
+	"flight_up": [KEY_SPACE],
+	"flight_down": [KEY_CTRL, KEY_C],
+	"flight_yaw_left": [KEY_LEFT],
+	"flight_yaw_right": [KEY_RIGHT],
+	"flight_pitch_up": [KEY_UP],
+	"flight_pitch_down": [KEY_DOWN],
+	"flight_roll_left": [KEY_Q],
+	"flight_roll_right": [KEY_E],
+	"flight_boost": [KEY_SHIFT],
+	"flight_assist_toggle": [KEY_X],
+	"fire_main_weapon": [KEY_1],
+	"fire_secondary_weapon": [KEY_2],
+	"fire_missile": [KEY_3],
+	"camera_orbit_up": [KEY_I],
+	"camera_orbit_down": [KEY_K],
+	"camera_orbit_left": [KEY_J],
+	"camera_orbit_right": [KEY_L],
+	"camera_recenter": [KEY_R],
+	"camera_focus_selected": [KEY_F],
+	"camera_focus_target": [KEY_T],
+	"battle_retreat": [KEY_ESCAPE]
+}
+
 var config: Dictionary = {}
 var payload: Dictionary = {}
 var ship_definitions: Dictionary = {}
@@ -43,18 +71,37 @@ var battle_started := false
 var battle_ended := false
 var intro_active := false
 var ai_timer := 0.0
+var enemy_fire_timer := 0.0
 var hud_timer := 0.0
 var special_cooldowns: Dictionary = {}
 var manual_scans: Dictionary = {}
 
 
 func _ready() -> void:
+	_ensure_input_actions()
 	call_deferred("_start_default_if_needed")
 
 
 func setup(new_payload: Dictionary = {}) -> void:
 	payload = new_payload.duplicate(true)
 	_start_battle()
+
+
+func _ensure_input_actions() -> void:
+	for action_name in INPUT_ACTIONS.keys():
+		if not InputMap.has_action(action_name):
+			InputMap.add_action(action_name)
+		for keycode in INPUT_ACTIONS[action_name]:
+			var exists := false
+			for existing_event in InputMap.action_get_events(action_name):
+				if existing_event is InputEventKey and existing_event.keycode == int(keycode):
+					exists = true
+					break
+			if exists:
+				continue
+			var key_event := InputEventKey.new()
+			key_event.keycode = int(keycode)
+			InputMap.action_add_event(action_name, key_event)
 
 
 func _process(delta: float) -> void:
@@ -65,15 +112,44 @@ func _process(delta: float) -> void:
 	if intro_active:
 		_update_camera(delta)
 		return
-	_tick_ships(delta)
 	_tick_ai(delta)
 	_update_camera(delta)
-	_try_enemy_fire()
-	_check_battle_end()
+	_handle_camera_keyboard(delta)
+	_try_enemy_fire(delta)
 	hud_timer -= delta
 	if hud_timer <= 0.0:
 		hud_timer = 0.16
 		_refresh_hud()
+
+
+func _physics_process(delta: float) -> void:
+	if not battle_started or battle_ended or intro_active:
+		return
+	_handle_player_flight_input()
+	_tick_ships(delta)
+	_check_battle_end()
+
+
+func _handle_player_flight_input() -> void:
+	if selected_ship == null or selected_ship.destroyed_flag:
+		return
+	var thrust := Vector3.ZERO
+	thrust.x = Input.get_action_strength("flight_strafe_right") - Input.get_action_strength("flight_strafe_left")
+	thrust.y = Input.get_action_strength("flight_up") - Input.get_action_strength("flight_down")
+	thrust.z = Input.get_action_strength("flight_forward") - Input.get_action_strength("flight_reverse")
+	var rotation := Vector3.ZERO
+	rotation.x = Input.get_action_strength("flight_pitch_down") - Input.get_action_strength("flight_pitch_up")
+	rotation.y = Input.get_action_strength("flight_yaw_left") - Input.get_action_strength("flight_yaw_right")
+	rotation.z = Input.get_action_strength("flight_roll_left") - Input.get_action_strength("flight_roll_right")
+	var boost: bool = Input.is_action_pressed("flight_boost")
+	if selected_ship.direct_control_enabled or thrust.length() > 0.01 or rotation.length() > 0.01:
+		selected_ship.set_manual_input(thrust, rotation, boost)
+
+
+func _handle_camera_keyboard(delta: float) -> void:
+	var orbit_speed: float = 1.85 * delta
+	camera_yaw += (Input.get_action_strength("camera_orbit_left") - Input.get_action_strength("camera_orbit_right")) * orbit_speed
+	camera_pitch = clamp(camera_pitch + (Input.get_action_strength("camera_orbit_up") - Input.get_action_strength("camera_orbit_down")) * orbit_speed * 0.7, -1.25, -0.12)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -108,15 +184,23 @@ func _unhandled_input(event: InputEvent) -> void:
 			forward.y = 0
 			camera_target += (-right * motion.relative.x + -forward.normalized() * motion.relative.y) * camera_distance * 0.001
 	elif event is InputEventKey and event.pressed:
-		match event.keycode:
-			KEY_R:
-				_reset_camera()
-			KEY_F:
-				_focus_selected_ship()
-			KEY_T:
-				_focus_target_ship()
-			KEY_ESCAPE:
-				_finish_battle("retreat")
+		if event.is_action_pressed("camera_recenter"):
+			_recenter_camera_behind_ship()
+		elif event.is_action_pressed("camera_focus_selected"):
+			_focus_selected_ship()
+		elif event.is_action_pressed("camera_focus_target"):
+			_focus_target_ship()
+		elif event.is_action_pressed("battle_retreat"):
+			_finish_battle("retreat")
+		elif event.is_action_pressed("flight_assist_toggle") and selected_ship != null:
+			var enabled: bool = selected_ship.toggle_flight_assist()
+			_log("Flight assist %s." % ("enabled" if enabled else "disabled"))
+		elif event.is_action_pressed("fire_main_weapon"):
+			_fire_weapon_by_id("main_cannon_mk1")
+		elif event.is_action_pressed("fire_secondary_weapon"):
+			_fire_weapon_by_id("secondary_cannon_mk1")
+		elif event.is_action_pressed("fire_missile"):
+			_fire_weapon_by_id("missile_mk1")
 
 
 func _start_default_if_needed() -> void:
@@ -140,6 +224,7 @@ func _start_battle() -> void:
 	if not player_ships.is_empty():
 		selected_ship = player_ships[0]
 		selected_ship.set_selected(true)
+		selected_ship.set_direct_control(bool(config.get("direct_control_default", false)))
 		camera_target = selected_ship.global_position
 		follow_selected = true
 	if bool(config.get("auto_select_first_enemy", false)) and not enemy_ships.is_empty():
@@ -404,13 +489,18 @@ func _refresh_hud() -> void:
 	if selected_ship == null:
 		return
 	var player_status: Dictionary = selected_ship.get_status_percent()
-	player_label.text = "PLAYER: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%\nEnergy %.0f / %.0f\nCamera: RMB orbit, wheel zoom, MMB pan, F focus, T target" % [
+	var control_mode: String = "MANUAL" if selected_ship.direct_control_enabled else "AUTO"
+	var assist_mode: String = "ON" if selected_ship.flight_assist_enabled else "OFF"
+	player_label.text = "PLAYER: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%\nEnergy %.0f / %.0f | Speed %.0f\nMode %s | Assist %s | W/S A/D Space/Ctrl | Arrows Q/E | 1/2/3" % [
 		selected_ship.display_name,
 		player_status["shield"] * 100.0,
 		player_status["armor"] * 100.0,
 		player_status["hull"] * 100.0,
 		selected_ship.energy,
-		float(selected_ship.stats.get("energy_capacity", 0))
+		float(selected_ship.stats.get("energy_capacity", 0)),
+		selected_ship.velocity.length(),
+		control_mode,
+		assist_mode
 	]
 	target_label.text = _target_text()
 	_rebuild_weapon_buttons()
@@ -431,16 +521,35 @@ func _target_text() -> String:
 			return "TARGET: Probable %s\nDistance: %s\nThreat: %s\nDetection: %s" % [target_ship.ship_class.capitalize(), _format_distance(distance), target_ship.stats.get("combat_rating", "?"), label_text]
 		TARGETING.DetectionState.SCANNED:
 			var status: Dictionary = target_ship.get_status_percent()
-			return "TARGET: %s\nClass: %s  Distance: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%" % [
+			return "TARGET: %s\nClass: %s  Distance: %s\nBearing: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%" % [
 				target_ship.display_name,
 				target_ship.ship_class.capitalize(),
 				_format_distance(distance),
+				_target_bearing_text(target_ship),
 				status["shield"] * 100.0,
 				status["armor"] * 100.0,
 				status["hull"] * 100.0
 			]
 		_:
 			return "TARGET\nUndetected signal."
+
+
+func _target_bearing_text(ship: Variant) -> String:
+	if selected_ship == null or ship == null:
+		return "--"
+	var local_offset: Vector3 = selected_ship.global_transform.basis.inverse() * (ship.global_position - selected_ship.global_position)
+	var horizontal: String = "CENTER"
+	if local_offset.x > 260.0:
+		horizontal = "RIGHT"
+	elif local_offset.x < -260.0:
+		horizontal = "LEFT"
+	var vertical: String = "LEVEL"
+	if local_offset.y > 220.0:
+		vertical = "HIGH"
+	elif local_offset.y < -220.0:
+		vertical = "LOW"
+	var fore_aft: String = "FORWARD" if local_offset.z < 0.0 else "AFT"
+	return "%s / %s / %s" % [fore_aft, horizontal, vertical]
 
 
 func _rebuild_weapon_buttons() -> void:
@@ -551,7 +660,11 @@ func _tick_ai(delta: float) -> void:
 			AI.tick(enemy, player, delta)
 
 
-func _try_enemy_fire() -> void:
+func _try_enemy_fire(delta: float) -> void:
+	enemy_fire_timer -= delta
+	if enemy_fire_timer > 0.0:
+		return
+	enemy_fire_timer = 0.18
 	var player: Variant = _first_living(player_ships)
 	if player == null:
 		return
@@ -573,7 +686,7 @@ func _fire_selected_weapon(index: int) -> void:
 	if _spawn_projectile(selected_ship, index, target_ship) != null:
 		_log("Weapon fired.")
 	else:
-		_log("Weapon not ready or target out of range.")
+		_log(_weapon_block_reason(index))
 
 
 func _fire_weapon_by_id(weapon_id: String) -> void:
@@ -659,9 +772,11 @@ func _handle_left_click(screen_position: Vector2) -> void:
 		return
 
 	var point := _screen_to_battle_plane(screen_position)
-	if selected_ship != null:
+	if selected_ship != null and not selected_ship.direct_control_enabled:
 		selected_ship.command_move(point)
 		_log("Move order issued.")
+	else:
+		_log("No contact selected.")
 
 
 func _ship_at_screen_position(screen_position: Vector2) -> Variant:
@@ -674,7 +789,7 @@ func _ship_at_screen_position(screen_position: Vector2) -> Variant:
 			continue
 		var projected := camera.unproject_position(ship.global_position)
 		var distance := projected.distance_to(screen_position)
-		var pick_radius: float = max(70.0, float(ship.collision_radius) * 0.42)
+		var pick_radius: float = max(96.0, min(190.0, float(ship.collision_radius) * 0.82))
 		if distance < best_distance and distance < pick_radius:
 			best_distance = distance
 			best_ship = ship
@@ -709,6 +824,19 @@ func _reset_camera() -> void:
 	if selected_ship != null:
 		camera_target = selected_ship.global_position
 	_apply_opening_camera()
+
+
+func _recenter_camera_behind_ship() -> void:
+	if selected_ship == null:
+		_reset_camera()
+		return
+	var forward: Vector3 = -selected_ship.global_transform.basis.z.normalized()
+	var behind: Vector3 = -forward
+	camera_yaw = atan2(behind.x, behind.z)
+	camera_pitch = -0.45
+	camera_distance = max(2200.0, float(selected_ship.visual_length) * 6.5)
+	follow_selected = true
+	camera_target = selected_ship.global_position
 
 
 func _check_battle_end() -> void:
@@ -970,11 +1098,32 @@ func _weapon_status(weapon: Dictionary) -> String:
 		return "Range %s | No target" % _format_distance(range)
 	if distance > range:
 		return "Range %s | Target %s | OUT" % [_format_distance(range), _format_distance(distance)]
+	if not selected_ship.target_in_firing_arc(weapon, target_ship):
+		return "Arc %.0f° | ALIGN" % selected_ship.firing_arc_angle(weapon, target_ship)
 	if selected_ship.energy < float(weapon.get("energy_cost", 0)):
 		return "Range %s | ENERGY LOW" % _format_distance(range)
 	if cooldown > 0.0:
 		return "Range %s | CD %.1f" % [_format_distance(range), cooldown]
 	return "Range %s | READY" % _format_distance(range)
+
+
+func _weapon_block_reason(index: int) -> String:
+	if selected_ship == null or target_ship == null:
+		return "No target selected."
+	if index < 0 or index >= selected_ship.weapons.size():
+		return "Weapon is not installed."
+	var weapon: Dictionary = selected_ship.weapons[index]
+	var weapon_id: String = weapon.get("id", "")
+	var distance: float = selected_ship.global_position.distance_to(target_ship.global_position)
+	if distance > float(weapon.get("range", 0.0)):
+		return "Target out of range: %s." % _format_distance(distance)
+	if selected_ship.energy < float(weapon.get("energy_cost", 0.0)):
+		return "Not enough energy."
+	if float(selected_ship.weapon_cooldowns.get(weapon_id, 0.0)) > 0.0:
+		return "Weapon cooling down."
+	if not selected_ship.target_in_firing_arc(weapon, target_ship):
+		return "Target outside firing arc. Turn the bow toward it."
+	return "Weapon cannot fire."
 
 
 func _format_distance(distance: float) -> String:

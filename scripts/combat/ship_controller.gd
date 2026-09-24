@@ -22,6 +22,12 @@ var command: String = "stop"
 var destination: Vector3 = Vector3.ZERO
 var desired_range: float = 420.0
 var velocity: Vector3 = Vector3.ZERO
+var angular_velocity: Vector3 = Vector3.ZERO
+var direct_control_enabled := false
+var flight_assist_enabled := true
+var thrust_input: Vector3 = Vector3.ZERO
+var rotation_input: Vector3 = Vector3.ZERO
+var boost_input := false
 var damage_dealt: float = 0.0
 var damage_received: float = 0.0
 var destroyed_flag: bool = false
@@ -75,10 +81,14 @@ func tick(delta: float) -> void:
 		return
 	_recharge(delta)
 	_tick_cooldowns(delta)
-	_update_movement(delta)
+	if direct_control_enabled:
+		_update_direct_flight(delta)
+	else:
+		_update_movement(delta)
 
 
 func command_move(point: Vector3) -> void:
+	direct_control_enabled = false
 	command = "move"
 	destination = point
 	target = null
@@ -88,6 +98,7 @@ func command_approach(new_target: Variant) -> void:
 	if new_target == null:
 		return
 	target = new_target
+	direct_control_enabled = false
 	command = "approach"
 	desired_range = float(stats.get("preferred_range", 8500.0))
 
@@ -96,17 +107,20 @@ func command_maintain_range(new_target: Variant, range: float) -> void:
 	if new_target == null:
 		return
 	target = new_target
+	direct_control_enabled = false
 	command = "maintain_range"
 	desired_range = range
 
 
 func command_stop() -> void:
+	direct_control_enabled = false
 	command = "stop"
 	target = null
 	destination = position
 
 
 func command_retreat(from_position: Vector3) -> void:
+	direct_control_enabled = false
 	command = "retreat"
 	var away: Vector3 = (position - from_position).normalized()
 	if away.length() < 0.1:
@@ -123,7 +137,7 @@ func can_fire(weapon_index: int, new_target: Variant) -> bool:
 	var weapon: Dictionary = weapons[weapon_index]
 	var weapon_id: String = weapon.get("id", "")
 	var distance: float = global_position.distance_to(new_target.global_position)
-	return distance <= float(weapon.get("range", 0)) and float(weapon_cooldowns.get(weapon_id, 0.0)) <= 0.0 and energy >= float(weapon.get("energy_cost", 0))
+	return distance <= float(weapon.get("range", 0)) and float(weapon_cooldowns.get(weapon_id, 0.0)) <= 0.0 and energy >= float(weapon.get("energy_cost", 0)) and target_in_firing_arc(weapon, new_target)
 
 
 func fire_weapon(weapon_index: int, new_target: Variant, projectile_scene: PackedScene) -> Node3D:
@@ -137,8 +151,52 @@ func fire_weapon(weapon_index: int, new_target: Variant, projectile_scene: Packe
 	var hardpoint_name: String = weapon.get("hardpoint", "WeaponHardpoint%02d" % (weapon_index + 1))
 	projectile.position = get_hardpoint_global_position(hardpoint_name)
 	if projectile.has_method("setup"):
-		projectile.setup(self, new_target, weapon)
+		projectile.setup(self, new_target, _weapon_launch_data(weapon, new_target, hardpoint_name))
 	return projectile
+
+
+func set_direct_control(enabled: bool) -> void:
+	direct_control_enabled = enabled
+	if enabled:
+		command = "manual"
+		target = null
+
+
+func set_manual_input(new_thrust: Vector3, new_rotation: Vector3, boost: bool) -> void:
+	thrust_input = new_thrust.limit_length(1.0)
+	rotation_input = new_rotation.limit_length(1.0)
+	boost_input = boost
+	if thrust_input.length() > 0.01 or rotation_input.length() > 0.01:
+		set_direct_control(true)
+
+
+func toggle_flight_assist() -> bool:
+	flight_assist_enabled = not flight_assist_enabled
+	return flight_assist_enabled
+
+
+func target_in_firing_arc(weapon: Dictionary, new_target: Variant) -> bool:
+	if new_target == null:
+		return false
+	var hardpoint_name: String = weapon.get("hardpoint", "MainWeapon")
+	var forward: Vector3 = get_hardpoint_forward(hardpoint_name)
+	var to_target: Vector3 = (new_target.global_position - get_hardpoint_global_position(hardpoint_name)).normalized()
+	if to_target.length() < 0.001:
+		return true
+	var arc: float = float(weapon.get("firing_arc_degrees", 180.0))
+	var angle: float = rad_to_deg(acos(clamp(forward.dot(to_target), -1.0, 1.0)))
+	return angle <= arc * 0.5
+
+
+func firing_arc_angle(weapon: Dictionary, new_target: Variant) -> float:
+	if new_target == null:
+		return 999.0
+	var hardpoint_name: String = weapon.get("hardpoint", "MainWeapon")
+	var forward: Vector3 = get_hardpoint_forward(hardpoint_name)
+	var to_target: Vector3 = (new_target.global_position - get_hardpoint_global_position(hardpoint_name)).normalized()
+	if to_target.length() < 0.001:
+		return 0.0
+	return rad_to_deg(acos(clamp(forward.dot(to_target), -1.0, 1.0)))
 
 
 func apply_damage(amount: float, source: Variant = null) -> Dictionary:
@@ -231,7 +289,48 @@ func _update_movement(delta: float) -> void:
 	velocity = velocity.move_toward(target_velocity, acceleration * delta)
 	global_position += velocity * delta
 	if velocity.length() > 0.1:
-		look_at(global_position + velocity.normalized(), Vector3.UP)
+		var target_transform: Transform3D = global_transform.looking_at(global_position + velocity.normalized(), Vector3.UP)
+		var turn_rate: float = float(stats.get("turn_rate", 1.0))
+		global_transform.basis = global_transform.basis.slerp(target_transform.basis, clamp(turn_rate * delta, 0.0, 1.0)).orthonormalized()
+	_update_engine_effects()
+
+
+func _update_direct_flight(delta: float) -> void:
+	var forward: Vector3 = -global_transform.basis.z
+	var right: Vector3 = global_transform.basis.x
+	var up: Vector3 = global_transform.basis.y
+	var max_speed: float = float(stats.get("max_speed", 20))
+	var acceleration: float = float(stats.get("acceleration", 6))
+	var reverse_factor: float = float(stats.get("reverse_thrust_factor", 0.6))
+	var strafe_factor: float = float(stats.get("strafe_thrust_factor", 0.45))
+	var vertical_factor: float = float(stats.get("vertical_thrust_factor", 0.45))
+	var boost_factor: float = float(stats.get("boost_factor", 1.55)) if boost_input and thrust_input.z > 0.1 and energy > 3.0 else 1.0
+	if boost_factor > 1.0:
+		energy = max(0.0, energy - float(stats.get("boost_energy_per_second", 18.0)) * delta)
+	var acceleration_vector: Vector3 = Vector3.ZERO
+	if thrust_input.z > 0.0:
+		acceleration_vector += forward * acceleration * thrust_input.z * boost_factor
+	elif thrust_input.z < 0.0:
+		acceleration_vector += forward * acceleration * thrust_input.z * reverse_factor
+	acceleration_vector += right * acceleration * thrust_input.x * strafe_factor
+	acceleration_vector += up * acceleration * thrust_input.y * vertical_factor
+	velocity += acceleration_vector * delta
+	if velocity.length() > max_speed * boost_factor:
+		velocity = velocity.normalized() * max_speed * boost_factor
+	if flight_assist_enabled and thrust_input.length() < 0.02:
+		velocity = velocity.move_toward(Vector3.ZERO, acceleration * 0.48 * delta)
+	global_position += velocity * delta
+
+	var turn_acceleration: float = float(stats.get("angular_acceleration", 0.9))
+	var max_turn_speed: float = float(stats.get("max_angular_speed", 0.62))
+	angular_velocity += rotation_input * turn_acceleration * delta
+	if angular_velocity.length() > max_turn_speed:
+		angular_velocity = angular_velocity.normalized() * max_turn_speed
+	if flight_assist_enabled and rotation_input.length() < 0.02:
+		angular_velocity = angular_velocity.move_toward(Vector3.ZERO, turn_acceleration * 0.72 * delta)
+	rotate_object_local(Vector3.RIGHT, angular_velocity.x * delta)
+	rotate_object_local(Vector3.UP, angular_velocity.y * delta)
+	rotate_object_local(Vector3.FORWARD, angular_velocity.z * delta)
 	_update_engine_effects()
 
 
@@ -407,7 +506,7 @@ func _engine_material(intensity: float) -> StandardMaterial3D:
 func _update_engine_effects() -> void:
 	var max_speed: float = max(1.0, float(stats.get("max_speed", 1.0)))
 	var thrust_ratio: float = clamp(velocity.length() / max_speed, 0.0, 1.0)
-	var intensity: float = 0.35 + thrust_ratio * 1.35
+	var intensity: float = 0.35 + thrust_ratio * 1.35 + (0.75 if boost_input else 0.0)
 	for glow in engine_glows:
 		var material := glow.material_override as StandardMaterial3D
 		if material != null:
@@ -445,6 +544,49 @@ func get_hardpoint_global_position(hardpoint_name: String) -> Vector3:
 	if marker is Marker3D:
 		return marker.global_position
 	return global_position + global_transform.basis * Vector3(0, visual_length * 0.03, -visual_length * 0.5)
+
+
+func get_hardpoint_forward(hardpoint_name: String) -> Vector3:
+	var marker := hardpoint_root.get_node_or_null(hardpoint_name) if hardpoint_root != null else null
+	if marker == null and engine_root != null:
+		marker = engine_root.get_node_or_null(hardpoint_name)
+	if marker is Marker3D:
+		return -marker.global_transform.basis.z.normalized()
+	return -global_transform.basis.z.normalized()
+
+
+func _weapon_launch_data(weapon: Dictionary, new_target: Variant, hardpoint_name: String) -> Dictionary:
+	var launch_weapon: Dictionary = weapon.duplicate(true)
+	var launch_direction: Vector3 = get_hardpoint_forward(hardpoint_name)
+	if launch_weapon.get("weapon_type", "") != "missile":
+		launch_direction = _intercept_direction(new_target, get_hardpoint_global_position(hardpoint_name), float(weapon.get("projectile_speed", 120.0)), launch_direction)
+	launch_weapon["launch_direction"] = launch_direction
+	launch_weapon["source_velocity"] = velocity
+	launch_weapon["owner_id"] = ship_id
+	return launch_weapon
+
+
+func _intercept_direction(new_target: Variant, origin: Vector3, projectile_speed: float, fallback: Vector3) -> Vector3:
+	if new_target == null or projectile_speed <= 0.0:
+		return fallback
+	var target_velocity: Vector3 = new_target.velocity
+	var relative_position: Vector3 = new_target.global_position - origin
+	var a: float = target_velocity.dot(target_velocity) - projectile_speed * projectile_speed
+	var b: float = 2.0 * relative_position.dot(target_velocity)
+	var c: float = relative_position.dot(relative_position)
+	var t: float = 0.0
+	if abs(a) < 0.001:
+		t = -c / b if abs(b) > 0.001 else 0.0
+	else:
+		var discriminant: float = b * b - 4.0 * a * c
+		if discriminant >= 0.0:
+			var sqrt_disc: float = sqrt(discriminant)
+			var t1: float = (-b - sqrt_disc) / (2.0 * a)
+			var t2: float = (-b + sqrt_disc) / (2.0 * a)
+			t = min(t1, t2) if t1 > 0.0 and t2 > 0.0 else max(t1, t2)
+	if t <= 0.0:
+		return relative_position.normalized()
+	return (relative_position + target_velocity * t).normalized()
 
 
 func _array_to_vec3(value: Variant) -> Vector3:

@@ -5,6 +5,7 @@
     "performance_mode": true,
     "use_optional_models": false,
     "auto_select_first_enemy": true,
+    "direct_control_default": true,
     "keep_opening_camera_after_intro": true,
     "intro": {
       "enabled": false
