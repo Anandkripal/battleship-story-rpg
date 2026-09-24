@@ -29,7 +29,7 @@ func launch_battle(config: Dictionary = {}) -> void:
 		"text": _format_battle_report(result),
 		"next": ""
 	})
-	await _singleton("UIManager").show_main_menu()
+	await _singleton("UIManager").show_scene("res://scenes/ship_management.tscn")
 
 
 func start_alternate_space_test() -> void:

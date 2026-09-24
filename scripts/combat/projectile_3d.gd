@@ -13,6 +13,7 @@ func setup(new_source: Variant, new_target: Variant, new_weapon: Dictionary) -> 
 	target = new_target
 	weapon = new_weapon.duplicate(true)
 	speed = float(weapon.get("projectile_speed", 120))
+	hit_radius = max(24.0, float(target.collision_radius) * 0.42) if target != null else hit_radius
 	_build_visual()
 
 
@@ -34,7 +35,7 @@ func _process(delta: float) -> void:
 func _build_visual() -> void:
 	var mesh_instance := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
-	mesh.radius = 0.45
+	mesh.radius = 18.0
 	mesh_instance.mesh = mesh
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(1.0, 0.75, 0.18)
@@ -47,7 +48,7 @@ func _build_visual() -> void:
 func _spawn_hit_flash() -> void:
 	var flash := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
-	mesh.radius = 2.2
+	mesh.radius = hit_radius * 0.45
 	flash.mesh = mesh
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(1.0, 0.45, 0.15, 0.45)

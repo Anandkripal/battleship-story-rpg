@@ -1,8 +1,16 @@
 extends Control
 
+const SHIP_VISUAL := preload("res://scenes/ships/visuals/player_fire_warship.tscn")
+
 var modules: Dictionary = {}
+var ship_definitions: Dictionary = {}
 var selected_module_id: String = ""
 var preview_root: SubViewportContainer
+var preview_world: Node3D
+var preview_ship: Node3D
+var preview_highlight: MeshInstance3D
+var preview_camera: Camera3D
+var preview_distance: float = 1000.0
 var detail_label: Label
 var resource_label: Label
 var module_list: VBoxContainer
@@ -11,7 +19,15 @@ var module_list: VBoxContainer
 func _ready() -> void:
 	var data: Variant = _singleton("DataManager").load_data_file("fire_warship_modules.json", {})
 	modules = data if data is Dictionary else {}
+	var ships_data: Variant = _singleton("DataManager").load_data_file("ship_definitions.json", {})
+	ship_definitions = ships_data if ships_data is Dictionary else {}
 	_build_ui()
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	if preview_ship != null:
+		preview_ship.rotation_degrees.y += delta * 9.0
 
 
 func _build_ui() -> void:
@@ -98,29 +114,40 @@ func _build_preview() -> void:
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	preview_root.add_child(viewport)
 
-	var world := Node3D.new()
-	viewport.add_child(world)
+	preview_world = Node3D.new()
+	viewport.add_child(preview_world)
 
 	var light := DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-35, 30, 0)
-	world.add_child(light)
+	light.light_energy = 2.2
+	preview_world.add_child(light)
 
-	var ship := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(3.4, 0.9, 8.0)
-	ship.mesh = box
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.2, 0.55, 1.0)
-	material.emission_enabled = true
-	material.emission = Color(0.05, 0.2, 0.45)
-	ship.material_override = material
-	world.add_child(ship)
+	var definition: Dictionary = ship_definitions.get("fire_warship_mk1", {})
+	preview_ship = SHIP_VISUAL.instantiate()
+	if preview_ship.has_method("setup"):
+		preview_ship.setup(definition)
+	preview_ship.scale = Vector3.ONE * 0.9
+	preview_world.add_child(preview_ship)
 
-	var camera := Camera3D.new()
-	camera.position = Vector3(7, 5, 11)
-	camera.look_at(Vector3.ZERO, Vector3.UP)
-	camera.current = true
-	viewport.add_child(camera)
+	preview_highlight = MeshInstance3D.new()
+	var highlight_mesh := SphereMesh.new()
+	highlight_mesh.radius = 38.0
+	preview_highlight.mesh = highlight_mesh
+	var highlight_material := StandardMaterial3D.new()
+	highlight_material.albedo_color = Color(0.1, 1.0, 0.7, 0.32)
+	highlight_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	highlight_material.emission_enabled = true
+	highlight_material.emission = Color(0.1, 1.0, 0.7)
+	preview_highlight.material_override = highlight_material
+	preview_highlight.visible = false
+	preview_ship.add_child(preview_highlight)
+
+	preview_camera = Camera3D.new()
+	preview_camera.position = Vector3(540, 260, 900)
+	preview_camera.fov = 42
+	preview_camera.current = true
+	viewport.add_child(preview_camera)
+	preview_camera.look_at(Vector3.ZERO, Vector3.UP)
 
 
 func _refresh() -> void:
@@ -155,6 +182,7 @@ func _refresh_modules() -> void:
 		button.pressed.connect(func() -> void:
 			selected_module_id = module_id
 			_refresh_details()
+			_update_preview_highlight()
 		)
 		module_list.add_child(button)
 	if selected_module_id.is_empty() and not equipped.is_empty():
@@ -182,6 +210,7 @@ func _refresh_details() -> void:
 		_format_dict(module.get("material_cost", {})),
 		module.get("energy_requirement", 0)
 	]
+	_update_preview_highlight()
 
 
 func _upgrade_selected() -> void:
@@ -194,6 +223,20 @@ func _upgrade_selected() -> void:
 	_refresh()
 
 
+func _update_preview_highlight() -> void:
+	if preview_highlight == null or selected_module_id.is_empty() or not modules.has(selected_module_id):
+		return
+	var module: Dictionary = modules[selected_module_id]
+	var attachment: String = module.get("visual_attachment", "")
+	var definition: Dictionary = ship_definitions.get("fire_warship_mk1", {})
+	var hardpoints: Dictionary = definition.get("hardpoints", {})
+	if attachment.is_empty() or not hardpoints.has(attachment):
+		preview_highlight.visible = false
+		return
+	preview_highlight.position = _array_to_vec3(hardpoints[attachment])
+	preview_highlight.visible = true
+
+
 func _format_dict(data: Dictionary) -> String:
 	if data.is_empty():
 		return "None"
@@ -201,6 +244,12 @@ func _format_dict(data: Dictionary) -> String:
 	for key in data.keys():
 		lines.append("%s: %s" % [str(key).capitalize().replace("_", " "), data[key]])
 	return "\n".join(lines)
+
+
+func _array_to_vec3(value: Variant) -> Vector3:
+	if value is Array and value.size() >= 3:
+		return Vector3(float(value[0]), float(value[1]), float(value[2]))
+	return Vector3.ZERO
 
 
 func _singleton(singleton_name: String) -> Variant:

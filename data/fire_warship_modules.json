@@ -15,7 +15,7 @@
     "energy_requirement": 22,
     "special_properties": {},
     "icon": "",
-    "visual_attachment": "WeaponHardpoint01"
+    "visual_attachment": "MainWeapon"
   },
   "fw_armor_common": {
     "id": "fw_armor_common",
@@ -49,7 +49,7 @@
     "energy_requirement": 0,
     "special_properties": {},
     "icon": "",
-    "visual_attachment": "EngineHardpoint01"
+    "visual_attachment": "EngineLeft"
   },
   "fw_radar_common": {
     "id": "fw_radar_common",
@@ -121,6 +121,6 @@
       "cooldown": 25.0
     },
     "icon": "",
-    "visual_attachment": "SpecialModule01"
+    "visual_attachment": "SpecialModule"
   }
 }

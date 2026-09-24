@@ -1,0 +1,93 @@
+{
+  "fire_warship_quaternius": {
+    "display_name": "Fire Warship Visual",
+    "source_pack": "Quaternius Ultimate Spaceships Pack",
+    "selected_model": "Executioner",
+    "model_path": "",
+    "optional_model_paths": [
+      "res://assets/Ultimate Spaceships - May 2021/Executioner/glTF/Executioner.gltf"
+    ],
+    "model_scale": [54, 54, 54],
+    "model_rotation_degrees": [0, 180, 0],
+    "model_offset": [0, 0, 0],
+    "notes": "Optional ignored local CC0 asset. Falls back to procedural geometry when absent."
+  },
+  "enemy_frigate_quaternius": {
+    "display_name": "Enemy Frigate Visual",
+    "source_pack": "Quaternius Ultimate Spaceships Pack",
+    "selected_model": "Spitfire",
+    "model_path": "",
+    "optional_model_paths": [
+      "res://assets/Ultimate Spaceships - May 2021/Spitfire/glTF/Spitfire.gltf"
+    ],
+    "model_scale": [22, 22, 22],
+    "model_rotation_degrees": [0, 180, 0],
+    "model_offset": [0, 0, 0],
+    "notes": "Optional ignored local CC0 asset."
+  },
+  "enemy_destroyer_quaternius": {
+    "display_name": "Enemy Destroyer Visual",
+    "source_pack": "Quaternius Ultimate Spaceships Pack",
+    "selected_model": "Imperial",
+    "model_path": "",
+    "optional_model_paths": [
+      "res://assets/Ultimate Spaceships - May 2021/Imperial/glTF/Imperial.gltf"
+    ],
+    "model_scale": [42, 42, 42],
+    "model_rotation_degrees": [0, 180, 0],
+    "model_offset": [0, 0, 0],
+    "notes": "Optional ignored local CC0 asset."
+  },
+  "enemy_cruiser_quaternius": {
+    "display_name": "Enemy Cruiser Visual",
+    "source_pack": "Quaternius Ultimate Spaceships Pack",
+    "selected_model": "Zenith",
+    "model_path": "",
+    "optional_model_paths": [
+      "res://assets/Ultimate Spaceships - May 2021/Zenith/glTF/Zenith.gltf"
+    ],
+    "model_scale": [76, 76, 76],
+    "model_rotation_degrees": [0, 180, 0],
+    "model_offset": [0, 0, 0],
+    "notes": "Optional ignored local CC0 asset."
+  },
+  "asteroid_rock_1": {
+    "display_name": "Asteroid Rock 1",
+    "source_pack": "Quaternius Ultimate Space Kit",
+    "selected_model": "Rock_1",
+    "model_path": "",
+    "optional_model_paths": [
+      "res://assets/Ultimate Space Kit - March 2023/Environment/GLTF/Rock_1.gltf"
+    ],
+    "model_scale": [44, 44, 44],
+    "model_rotation_degrees": [0, 0, 0],
+    "model_offset": [0, 0, 0],
+    "notes": "Optional ignored local CC0 asset."
+  },
+  "asteroid_rock_2": {
+    "display_name": "Asteroid Rock 2",
+    "source_pack": "Quaternius Ultimate Space Kit",
+    "selected_model": "Rock_Large_2",
+    "model_path": "",
+    "optional_model_paths": [
+      "res://assets/Ultimate Space Kit - March 2023/Environment/GLTF/Rock_Large_2.gltf"
+    ],
+    "model_scale": [56, 56, 56],
+    "model_rotation_degrees": [0, 0, 0],
+    "model_offset": [0, 0, 0],
+    "notes": "Optional ignored local CC0 asset."
+  },
+  "distant_planet_quaternius": {
+    "display_name": "Distant Planet",
+    "source_pack": "Quaternius Ultimate Space Kit",
+    "selected_model": "Planet_7",
+    "model_path": "",
+    "optional_model_paths": [
+      "res://assets/Ultimate Space Kit - March 2023/Environment/GLTF/Planet_7.gltf"
+    ],
+    "model_scale": [900, 900, 900],
+    "model_rotation_degrees": [0, 0, 0],
+    "model_offset": [0, 0, 0],
+    "notes": "Optional ignored local CC0 asset; procedural planet is used when absent."
+  }
+}

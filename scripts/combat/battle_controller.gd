@@ -9,6 +9,7 @@ const EXPLOSION_SCENE := "res://scenes/combat/explosion_3d.tscn"
 const TARGETING := preload("res://scripts/combat/targeting_system.gd")
 const WEAPONS := preload("res://scripts/combat/weapon_system.gd")
 const AI := preload("res://scripts/combat/combat_ai.gd")
+const MODEL_CATALOG := preload("res://scripts/combat/model_catalog.gd")
 
 var config: Dictionary = {}
 var payload: Dictionary = {}
@@ -29,6 +30,8 @@ var rotating_camera := false
 var panning_camera := false
 var last_mouse_position := Vector2.ZERO
 var hud_layer: CanvasLayer
+var intro_overlay: Control
+var completion_overlay: Control
 var player_label: Label
 var target_label: Label
 var log_label: Label
@@ -37,9 +40,11 @@ var command_box: HBoxContainer
 var result: Dictionary = {}
 var battle_started := false
 var battle_ended := false
+var intro_active := false
 var ai_timer := 0.0
 var hud_timer := 0.0
 var special_cooldowns: Dictionary = {}
+var manual_scans: Dictionary = {}
 
 
 func _ready() -> void:
@@ -53,6 +58,11 @@ func setup(new_payload: Dictionary = {}) -> void:
 
 func _process(delta: float) -> void:
 	if not battle_started or battle_ended:
+		if battle_ended:
+			_update_camera(delta)
+		return
+	if intro_active:
+		_update_camera(delta)
 		return
 	_tick_ships(delta)
 	_tick_ai(delta)
@@ -67,6 +77,10 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not battle_started or battle_ended:
+		return
+	if intro_active:
+		if event is InputEventMouseButton or event is InputEventKey:
+			_finish_intro()
 		return
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
@@ -97,7 +111,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_R:
 				_reset_camera()
 			KEY_F:
-				follow_selected = not follow_selected
+				_focus_selected_ship()
+			KEY_T:
+				_focus_target_ship()
 			KEY_ESCAPE:
 				_finish_battle("retreat")
 
@@ -124,6 +140,7 @@ func _start_battle() -> void:
 		selected_ship = player_ships[0]
 		selected_ship.set_selected(true)
 		camera_target = selected_ship.global_position
+		follow_selected = true
 	result = {
 		"result": "running",
 		"ships_destroyed": 0,
@@ -134,6 +151,7 @@ func _start_battle() -> void:
 		"alternate_space": bool(payload.get("alternate_space", false))
 	}
 	_refresh_hud()
+	_start_intro()
 
 
 func _build_world() -> void:
@@ -142,20 +160,29 @@ func _build_world() -> void:
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.004, 0.006, 0.015)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.2, 0.28, 0.38)
+	env.ambient_light_color = Color(0.06, 0.08, 0.12)
+	env.glow_enabled = true
+	env.glow_intensity = 0.28
 	environment.environment = env
 	add_child(environment)
 
+	var sun_data: Dictionary = config.get("environment", {}).get("sun", {})
+	var sun_position: Vector3 = _array_to_vec3(sun_data.get("position", [24000, 12000, -18000]))
 	var light := DirectionalLight3D.new()
-	light.rotation_degrees = Vector3(-45, 35, 0)
-	light.light_energy = 2.0
+	light.look_at_from_position(sun_position.normalized() * -1000.0, Vector3.ZERO, Vector3.UP)
+	light.light_energy = float(sun_data.get("energy", 2.2))
 	add_child(light)
+	_add_sun(sun_position, _array_to_color(sun_data.get("color", [1.0, 0.82, 0.52]), Color(1.0, 0.82, 0.52)))
 
 	camera = Camera3D.new()
 	camera.fov = 48
+	camera.far = 120000
 	add_child(camera)
 	_reset_camera()
 
+	_add_starfield(int(config.get("environment", {}).get("starfield_count", 260)))
+	_add_planet(config.get("environment", {}).get("planet", {}))
+	_add_asteroid_field(config.get("environment", {}).get("asteroid_field", {}))
 	_add_grid()
 	_build_hud()
 
@@ -163,14 +190,109 @@ func _build_world() -> void:
 func _add_grid() -> void:
 	var mesh_instance := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(2600, 2600)
+	plane.size = Vector2(52000, 52000)
 	mesh_instance.mesh = plane
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(0.03, 0.07, 0.11, 0.32)
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mesh_instance.material_override = material
-	mesh_instance.position.y = -3
+	mesh_instance.position.y = -18
 	add_child(mesh_instance)
+
+
+func _add_starfield(count: int) -> void:
+	var multimesh_instance := MultiMeshInstance3D.new()
+	var star_mesh := SphereMesh.new()
+	star_mesh.radius = 18.0
+	var multimesh := MultiMesh.new()
+	multimesh.mesh = star_mesh
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.instance_count = count
+	for index in range(count):
+		var angle: float = float(index) * 12.9898
+		var radius: float = 42000.0 + fmod(float(index * 7919), 38000.0)
+		var x: float = sin(angle) * radius
+		var y: float = -9000.0 + fmod(float(index * 4813), 22000.0)
+		var z: float = cos(angle * 0.73) * radius - 17000.0
+		var transform := Transform3D(Basis(), Vector3(x, y, z))
+		var size: float = 0.35 + fmod(float(index * 37), 120.0) / 100.0
+		transform.basis = Basis().scaled(Vector3.ONE * size)
+		multimesh.set_instance_transform(index, transform)
+	multimesh_instance.multimesh = multimesh
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.82, 0.9, 1.0)
+	material.emission_enabled = true
+	material.emission = Color(0.62, 0.76, 1.0) * 0.75
+	multimesh_instance.material_override = material
+	add_child(multimesh_instance)
+
+
+func _add_sun(position_value: Vector3, color: Color) -> void:
+	var sun := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 900.0
+	sun.mesh = mesh
+	sun.position = position_value
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.emission_enabled = true
+	material.emission = color * 1.8
+	sun.material_override = material
+	add_child(sun)
+
+
+func _add_planet(planet_data: Dictionary) -> void:
+	if planet_data.is_empty():
+		return
+	var planet: Node3D = MODEL_CATALOG.instantiate_model(planet_data.get("visual_model", ""))
+	if planet == null:
+		var mesh_instance := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = float(planet_data.get("radius", 6200.0))
+		mesh.radial_segments = 64
+		mesh.rings = 32
+		mesh_instance.mesh = mesh
+		mesh_instance.material_override = _solid_material(_array_to_color(planet_data.get("color", [0.18, 0.34, 0.72]), Color(0.18, 0.34, 0.72)), Color(0.03, 0.07, 0.14))
+		planet = mesh_instance
+	planet.position = _array_to_vec3(planet_data.get("position", [-12500, -2600, -34000]))
+	add_child(planet)
+
+
+func _add_asteroid_field(field_data: Dictionary) -> void:
+	if field_data.is_empty():
+		return
+	var count: int = int(field_data.get("count", 24))
+	var center: Vector3 = _array_to_vec3(field_data.get("center", [9000, -350, -11200]))
+	var spread: Vector3 = _array_to_vec3(field_data.get("spread", [5000, 1200, 4200]))
+	var visual_models: Array = field_data.get("visual_models", [])
+	for index in range(count):
+		var asteroid: Node3D = null
+		if not visual_models.is_empty():
+			asteroid = MODEL_CATALOG.instantiate_model(str(visual_models[index % visual_models.size()]))
+		if asteroid == null:
+			asteroid = _fallback_asteroid(float(index))
+		var offset := Vector3(
+			(fmod(float(index * 1543), 1000.0) / 1000.0 - 0.5) * spread.x,
+			(fmod(float(index * 2909), 1000.0) / 1000.0 - 0.5) * spread.y,
+			(fmod(float(index * 3907), 1000.0) / 1000.0 - 0.5) * spread.z
+		)
+		asteroid.position = center + offset
+		asteroid.rotation_degrees = Vector3(index * 17.0, index * 43.0, index * 29.0)
+		var scale_value: float = 0.55 + fmod(float(index * 97), 140.0) / 100.0
+		asteroid.scale *= scale_value
+		add_child(asteroid)
+
+
+func _fallback_asteroid(index: float) -> Node3D:
+	var asteroid := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 75.0 + fmod(index * 53.0, 130.0)
+	mesh.radial_segments = 10
+	mesh.rings = 5
+	asteroid.mesh = mesh
+	asteroid.scale = Vector3(1.0, 0.62 + fmod(index * 0.19, 0.7), 0.78 + fmod(index * 0.31, 0.8))
+	asteroid.material_override = _solid_material(Color(0.33, 0.31, 0.29), Color(0.02, 0.018, 0.015))
+	return asteroid
 
 
 func _build_hud() -> void:
@@ -240,24 +362,26 @@ func _build_command_buttons() -> void:
 		if selected_ship != null and target_ship != null:
 			selected_ship.command_approach(target_ship)
 	)
+	_add_command_button("Scan", _scan_target)
 	_add_command_button("Maintain", func() -> void:
 		if selected_ship != null and target_ship != null:
-			selected_ship.command_maintain_range(target_ship, 520.0)
+			selected_ship.command_maintain_range(target_ship, float(selected_ship.stats.get("preferred_range", 8500.0)))
 	)
 	_add_command_button("Stop", func() -> void:
 		if selected_ship != null:
 			selected_ship.command_stop()
 	)
+	_add_command_button("Focus Ship", _focus_selected_ship)
+	_add_command_button("Focus Target", _focus_target_ship)
 	_add_command_button("Repair", _activate_emergency_repair)
 	_add_command_button("Retreat", func() -> void: _finish_battle("retreat"))
-	_add_command_button("Menu", func() -> void: _finish_battle("retreat"))
 
 
 func _refresh_hud() -> void:
 	if selected_ship == null:
 		return
 	var player_status: Dictionary = selected_ship.get_status_percent()
-	player_label.text = "PLAYER: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%\nEnergy %.0f / %.0f\nCamera: RMB orbit, wheel zoom, MMB pan, F follow" % [
+	player_label.text = "PLAYER: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%\nEnergy %.0f / %.0f\nCamera: RMB orbit, wheel zoom, MMB pan, F focus, T target" % [
 		selected_ship.display_name,
 		player_status["shield"] * 100.0,
 		player_status["armor"] * 100.0,
@@ -273,19 +397,19 @@ func _target_text() -> String:
 	if target_ship == null:
 		return "TARGET\nNo target selected.\nClick an enemy contact."
 	var distance: float = selected_ship.global_position.distance_to(target_ship.global_position)
-	var detection: int = TARGETING.detection_state(selected_ship, target_ship)
+	var detection: int = _detection_state(selected_ship, target_ship)
 	var label_text: String = TARGETING.detection_label(detection)
 	match detection:
 		TARGETING.DetectionState.CONTACT:
-			return "TARGET: UNKNOWN CONTACT\nDistance: %.1f km\nDetection: %s" % [distance / 100.0, label_text]
+			return "TARGET: UNKNOWN CONTACT\nDistance: %s\nDetection: %s" % [_format_distance(distance), label_text]
 		TARGETING.DetectionState.CLASSIFIED:
-			return "TARGET: Probable %s\nDistance: %.1f km\nThreat: %s\nDetection: %s" % [target_ship.ship_class.capitalize(), distance / 100.0, target_ship.stats.get("combat_rating", "?"), label_text]
+			return "TARGET: Probable %s\nDistance: %s\nThreat: %s\nDetection: %s" % [target_ship.ship_class.capitalize(), _format_distance(distance), target_ship.stats.get("combat_rating", "?"), label_text]
 		TARGETING.DetectionState.SCANNED:
 			var status: Dictionary = target_ship.get_status_percent()
-			return "TARGET: %s\nClass: %s  Distance: %.1f km\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%" % [
+			return "TARGET: %s\nClass: %s  Distance: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%" % [
 				target_ship.display_name,
 				target_ship.ship_class.capitalize(),
-				distance / 100.0,
+				_format_distance(distance),
 				status["shield"] * 100.0,
 				status["armor"] * 100.0,
 				status["hull"] * 100.0
@@ -300,13 +424,13 @@ func _rebuild_weapon_buttons() -> void:
 	for index in range(selected_ship.weapons.size()):
 		var weapon: Dictionary = selected_ship.weapons[index]
 		var weapon_id: String = weapon.get("id", "")
+		var status_text: String = _weapon_status(weapon)
 		var button := Button.new()
-		button.text = "%s\nCD %.1f  Energy %s" % [
+		button.text = "%s\n%s" % [
 			weapon.get("display_name", weapon_id),
-			float(selected_ship.weapon_cooldowns.get(weapon_id, 0.0)),
-			weapon.get("energy_cost", 0)
+			status_text
 		]
-		button.custom_minimum_size = Vector2(230, 58)
+		button.custom_minimum_size = Vector2(245, 64)
 		button.add_theme_font_size_override("font_size", 18)
 		button.disabled = target_ship == null or not selected_ship.can_fire(index, target_ship)
 		button.pressed.connect(func() -> void: _fire_selected_weapon(index))
@@ -343,6 +467,7 @@ func _spawn_fleet(fleet: Dictionary, target_array: Array) -> void:
 		ship.setup(ship_config, definition, weapon_definitions)
 		ship.faction = fleet.get("faction", definition.get("faction", "neutral"))
 		ship.set_meta("ai_profile", ship_config.get("ai_profile", "aggressive"))
+		ship.set_meta("ai_state", "PATROL")
 		ship.set_meta("reward", ship_config.get("reward", {}))
 		ship.destroyed.connect(_on_ship_destroyed)
 		target_array.append(ship)
@@ -382,7 +507,7 @@ func _fire_selected_weapon(index: int) -> void:
 	if selected_ship == null or target_ship == null:
 		_log("No target selected.")
 		return
-	if TARGETING.detection_state(selected_ship, target_ship) == TARGETING.DetectionState.UNDETECTED:
+	if _detection_state(selected_ship, target_ship) == TARGETING.DetectionState.UNDETECTED:
 		_log("Target is not detected.")
 		return
 	if _spawn_projectile(selected_ship, index, target_ship) != null:
@@ -399,6 +524,19 @@ func _spawn_projectile(source: Variant, weapon_index: int, target: Variant) -> N
 	if projectile != null:
 		add_child(projectile)
 	return projectile
+
+
+func _scan_target() -> void:
+	if selected_ship == null or target_ship == null:
+		_log("Select a target to scan.")
+		return
+	var distance: float = selected_ship.global_position.distance_to(target_ship.global_position)
+	if distance > float(selected_ship.stats.get("sensor_range", 0)) * 1.15:
+		_log("Target outside scan envelope: %s." % _format_distance(distance))
+		return
+	manual_scans[target_ship.ship_id] = true
+	_log("Scan complete: %s identified." % target_ship.display_name)
+	_refresh_hud()
 
 
 func _activate_emergency_repair() -> void:
@@ -436,7 +574,7 @@ func _handle_left_click(screen_position: Vector2) -> void:
 			_log("Selected %s." % selected_ship.display_name)
 		else:
 			target_ship = clicked_ship
-			_log("Target selected: %s." % target_ship.display_name)
+			_log("Target selected: %s." % TARGETING.detection_label(_detection_state(selected_ship, target_ship)))
 		return
 
 	var point := _screen_to_battle_plane(screen_position)
@@ -453,7 +591,8 @@ func _ship_at_screen_position(screen_position: Vector2) -> Variant:
 			continue
 		var projected := camera.unproject_position(ship.global_position)
 		var distance := projected.distance_to(screen_position)
-		if distance < best_distance and distance < 42.0:
+		var pick_radius: float = max(42.0, float(ship.collision_radius) * 0.18)
+		if distance < best_distance and distance < pick_radius:
 			best_distance = distance
 			best_ship = ship
 	return best_ship
@@ -483,7 +622,7 @@ func _update_camera(delta: float) -> void:
 func _reset_camera() -> void:
 	camera_yaw = 0.0
 	camera_pitch = -0.55
-	camera_distance = 920.0
+	camera_distance = 9000.0
 	if selected_ship != null:
 		camera_target = selected_ship.global_position
 
@@ -526,7 +665,7 @@ func _finish_battle(battle_result: String) -> void:
 		"player_ship_state": player_state,
 		"alternate_space": bool(payload.get("alternate_space", false))
 	}
-	battle_finished.emit(result)
+	_show_completion_overlay(result)
 
 
 func _on_ship_destroyed(ship: Variant) -> void:
@@ -534,9 +673,16 @@ func _on_ship_destroyed(ship: Variant) -> void:
 	var explosion: Node3D = packed.instantiate()
 	add_child(explosion)
 	explosion.global_position = ship.global_position
+	explosion.scale = Vector3.ONE * _explosion_scale(ship.ship_class)
 	if ship == target_ship:
 		target_ship = null
-	_log("%s destroyed." % ship.display_name)
+	var reward: Dictionary = ship.get_meta("reward", {})
+	var source_points: int = int(reward.get("source_points", 0))
+	_log("%s destroyed. +%s Source Points pending." % [ship.display_name, source_points])
+	var tween := create_tween()
+	tween.tween_property(ship, "scale", ship.scale * 0.68, 1.25)
+	tween.tween_interval(1.2)
+	tween.tween_callback(ship.queue_free)
 
 
 func _first_living(ships: Array) -> Variant:
@@ -556,6 +702,198 @@ func _sum_damage(ships: Array, mode: String) -> float:
 func _log(message: String) -> void:
 	if log_label != null:
 		log_label.text = message
+
+
+func _start_intro() -> void:
+	if not bool(config.get("intro", {}).get("enabled", true)):
+		_finish_intro()
+		return
+	intro_active = true
+	var intro_data: Dictionary = config.get("intro", {})
+	intro_overlay = Control.new()
+	intro_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var shade := ColorRect.new()
+	shade.color = Color(0, 0, 0, 0.28)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	intro_overlay.add_child(shade)
+	var label := Label.new()
+	label.text = "%s\nClick or press any key to skip." % intro_data.get("message", "SENSOR WARNING: UNKNOWN CONTACTS DETECTED")
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 34)
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	intro_overlay.add_child(label)
+	hud_layer.add_child(intro_overlay)
+	camera_target = Vector3(-2500, 400, -6200)
+	camera_distance = 14500.0
+	var timer := get_tree().create_timer(float(intro_data.get("duration", 5.0)))
+	timer.timeout.connect(_finish_intro)
+
+
+func _finish_intro() -> void:
+	if not intro_active:
+		return
+	intro_active = false
+	if intro_overlay != null:
+		intro_overlay.queue_free()
+		intro_overlay = null
+	_log("SENSOR WARNING: UNKNOWN CONTACTS DETECTED")
+	_focus_selected_ship()
+
+
+func _show_completion_overlay(final_result: Dictionary) -> void:
+	if hud_layer == null:
+		battle_finished.emit(final_result)
+		return
+	completion_overlay = Control.new()
+	completion_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hud_layer.add_child(completion_overlay)
+
+	var shade := ColorRect.new()
+	shade.color = Color(0, 0, 0, 0.62)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	completion_overlay.add_child(shade)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(520, 360)
+	panel.anchor_left = 0.5
+	panel.anchor_top = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 0.5
+	panel.offset_left = -260
+	panel.offset_top = -180
+	panel.offset_right = 260
+	panel.offset_bottom = 180
+	completion_overlay.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	panel.add_child(box)
+
+	var title := Label.new()
+	title.text = "EXPEDITION COMPLETE" if final_result.get("result", "") == "victory" else "EXPEDITION ABORTED"
+	title.add_theme_font_size_override("font_size", 30)
+	box.add_child(title)
+
+	var report := Label.new()
+	report.text = _format_result(final_result)
+	report.add_theme_font_size_override("font_size", 20)
+	report.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(report)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	box.add_child(row)
+
+	var return_button := Button.new()
+	return_button.text = "RETURN"
+	return_button.custom_minimum_size = Vector2(180, 58)
+	return_button.add_theme_font_size_override("font_size", 22)
+	return_button.pressed.connect(func() -> void: battle_finished.emit(final_result))
+	row.add_child(return_button)
+
+	var observe_button := Button.new()
+	observe_button.text = "OBSERVE"
+	observe_button.custom_minimum_size = Vector2(180, 58)
+	observe_button.add_theme_font_size_override("font_size", 22)
+	observe_button.pressed.connect(func() -> void:
+		if completion_overlay != null:
+			completion_overlay.queue_free()
+			completion_overlay = null
+	)
+	row.add_child(observe_button)
+
+
+func _format_result(final_result: Dictionary) -> String:
+	var rewards: Dictionary = final_result.get("rewards", {})
+	var reward_lines: Array[String] = []
+	for resource_id in rewards.keys():
+		reward_lines.append("+%s %s" % [rewards[resource_id], resource_id.capitalize().replace("_", " ")])
+	return "Enemies Destroyed: %s\nSource/Materials: %s\nDamage Dealt: %s\nDamage Taken: %s" % [
+		final_result.get("ships_destroyed", 0),
+		", ".join(reward_lines) if not reward_lines.is_empty() else "None",
+		final_result.get("damage_dealt", 0),
+		final_result.get("damage_received", 0)
+	]
+
+
+func _focus_selected_ship() -> void:
+	if selected_ship == null:
+		return
+	follow_selected = true
+	camera_target = selected_ship.global_position
+	camera_distance = max(2400.0, float(selected_ship.visual_length) * 8.0)
+
+
+func _focus_target_ship() -> void:
+	if target_ship == null:
+		_log("No target selected.")
+		return
+	follow_selected = false
+	camera_target = target_ship.global_position
+	camera_distance = max(2600.0, float(target_ship.visual_length) * 7.0)
+
+
+func _detection_state(observer: Variant, target: Variant) -> int:
+	if target != null and manual_scans.has(target.ship_id):
+		return TARGETING.DetectionState.SCANNED
+	return TARGETING.detection_state(observer, target)
+
+
+func _weapon_status(weapon: Dictionary) -> String:
+	var weapon_id: String = weapon.get("id", "")
+	var cooldown: float = float(selected_ship.weapon_cooldowns.get(weapon_id, 0.0))
+	var range: float = float(weapon.get("range", 0.0))
+	var distance: float = selected_ship.global_position.distance_to(target_ship.global_position) if target_ship != null else 0.0
+	if target_ship == null:
+		return "Range %s | No target" % _format_distance(range)
+	if distance > range:
+		return "Range %s | Target %s | OUT" % [_format_distance(range), _format_distance(distance)]
+	if selected_ship.energy < float(weapon.get("energy_cost", 0)):
+		return "Range %s | ENERGY LOW" % _format_distance(range)
+	if cooldown > 0.0:
+		return "Range %s | CD %.1f" % [_format_distance(range), cooldown]
+	return "Range %s | READY" % _format_distance(range)
+
+
+func _format_distance(distance: float) -> String:
+	if distance < 1000.0:
+		return "%.0f m" % distance
+	return "%.1f km" % (distance / 1000.0)
+
+
+func _explosion_scale(ship_class_name: String) -> float:
+	match ship_class_name:
+		"frigate":
+			return 10.0
+		"destroyer":
+			return 18.0
+		"cruiser":
+			return 34.0
+		_:
+			return 14.0
+
+
+func _solid_material(albedo: Color, emission: Color = Color.BLACK) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = albedo
+	if emission != Color.BLACK:
+		material.emission_enabled = true
+		material.emission = emission
+	return material
+
+
+func _array_to_color(value: Variant, fallback: Color) -> Color:
+	if value is Array and value.size() >= 3:
+		var alpha := float(value[3]) if value.size() >= 4 else 1.0
+		return Color(float(value[0]), float(value[1]), float(value[2]), alpha)
+	return fallback
+
+
+func _array_to_vec3(value: Variant) -> Vector3:
+	if value is Array and value.size() >= 3:
+		return Vector3(float(value[0]), float(value[1]), float(value[2]))
+	return Vector3.ZERO
 
 
 func _load_data(file_name: String) -> Dictionary:

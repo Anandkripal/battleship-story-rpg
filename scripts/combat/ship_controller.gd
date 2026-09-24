@@ -3,6 +3,8 @@ extends Node3D
 
 signal destroyed(ship: Variant)
 
+const VISUAL_WRAPPER := preload("res://scripts/combat/ship_visual_wrapper.gd")
+
 var ship_id: String = ""
 var display_name: String = ""
 var faction: String = ""
@@ -23,6 +25,16 @@ var velocity: Vector3 = Vector3.ZERO
 var damage_dealt: float = 0.0
 var damage_received: float = 0.0
 var destroyed_flag: bool = false
+var visual_length: float = 120.0
+var collision_radius: float = 80.0
+var gameplay_root: Node3D
+var visual_root: Node3D
+var hardpoint_root: Node3D
+var engine_root: Node3D
+var vfx_root: Node3D
+var audio_root: Node3D
+var engine_glows: Array[MeshInstance3D] = []
+var engine_particles: Array[GPUParticles3D] = []
 var selection_ring: MeshInstance3D
 var shield_flash: MeshInstance3D
 
@@ -41,6 +53,8 @@ func setup(config: Dictionary, definition: Dictionary, weapon_defs: Dictionary) 
 	armor = float(stats.get("max_armor", 0))
 	hull = float(stats.get("max_hull", 1))
 	energy = float(stats.get("energy_capacity", 100))
+	visual_length = float(definition.get("visual_length", stats.get("visual_length", 120.0)))
+	collision_radius = max(24.0, visual_length * 0.48)
 	hardpoints = definition.get("hardpoints", {}).duplicate(true)
 	for weapon_id in config.get("weapons", []):
 		if weapon_defs.has(weapon_id):
@@ -48,7 +62,7 @@ func setup(config: Dictionary, definition: Dictionary, weapon_defs: Dictionary) 
 			weapon["id"] = weapon_id
 			weapons.append(weapon)
 			weapon_cooldowns[weapon_id] = 0.0
-	_build_placeholder_ship()
+	_build_ship(definition)
 
 
 func tick(delta: float) -> void:
@@ -70,7 +84,7 @@ func command_approach(new_target: Variant) -> void:
 		return
 	target = new_target
 	command = "approach"
-	desired_range = 180.0
+	desired_range = float(stats.get("preferred_range", 8500.0))
 
 
 func command_maintain_range(new_target: Variant, range: float) -> void:
@@ -115,8 +129,8 @@ func fire_weapon(weapon_index: int, new_target: Variant, projectile_scene: Packe
 	energy -= float(weapon.get("energy_cost", 0))
 	weapon_cooldowns[weapon_id] = float(weapon.get("cooldown", 1.0))
 	var projectile: Node3D = projectile_scene.instantiate()
-	var hardpoint_name := "WeaponHardpoint%02d" % (weapon_index + 1)
-	projectile.position = global_position + _hardpoint_offset(hardpoint_name)
+	var hardpoint_name: String = weapon.get("hardpoint", "WeaponHardpoint%02d" % (weapon_index + 1))
+	projectile.position = get_hardpoint_global_position(hardpoint_name)
 	if projectile.has_method("setup"):
 		projectile.setup(self, new_target, weapon)
 	return projectile
@@ -206,46 +220,127 @@ func _update_movement(delta: float) -> void:
 	global_position += velocity * delta
 	if velocity.length() > 0.1:
 		look_at(global_position + velocity.normalized(), Vector3.UP)
+	_update_engine_effects()
 
 
 func _destroy() -> void:
 	destroyed_flag = true
 	velocity = Vector3.ZERO
-	visible = false
+	command = "destroyed"
+	if selection_ring != null:
+		selection_ring.visible = false
+	for particles in engine_particles:
+		particles.emitting = false
 	destroyed.emit(self)
 
 
-func _build_placeholder_ship() -> void:
-	var body := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	var length: float = 5.6 if ship_class != "frigate" else 3.8
-	box.size = Vector3(2.2, 0.8, length)
-	body.mesh = box
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.20, 0.55, 1.0) if faction == "player" else Color(1.0, 0.20, 0.20)
-	material.emission_enabled = true
-	material.emission = material.albedo_color * 0.25
-	body.material_override = material
-	add_child(body)
+func _build_ship(definition: Dictionary) -> void:
+	gameplay_root = Node3D.new()
+	gameplay_root.name = "GameplayRoot"
+	add_child(gameplay_root)
 
-	var engine_glow := MeshInstance3D.new()
-	var engine_mesh := CylinderMesh.new()
-	engine_mesh.top_radius = 0.28
-	engine_mesh.bottom_radius = 0.28
-	engine_mesh.height = 0.25
-	engine_glow.mesh = engine_mesh
-	engine_glow.position = Vector3(0, 0, length * 0.5 + 0.1)
-	var engine_material := StandardMaterial3D.new()
-	engine_material.albedo_color = Color(0.2, 0.8, 1.0)
-	engine_material.emission_enabled = true
-	engine_material.emission = Color(0.2, 0.8, 1.0)
-	engine_glow.material_override = engine_material
-	add_child(engine_glow)
+	visual_root = Node3D.new()
+	visual_root.name = "VisualRoot"
+	add_child(visual_root)
+
+	hardpoint_root = Node3D.new()
+	hardpoint_root.name = "Hardpoints"
+	add_child(hardpoint_root)
+
+	engine_root = Node3D.new()
+	engine_root.name = "EnginePoints"
+	add_child(engine_root)
+
+	vfx_root = Node3D.new()
+	vfx_root.name = "VFX"
+	add_child(vfx_root)
+
+	audio_root = Node3D.new()
+	audio_root.name = "Audio"
+	add_child(audio_root)
+
+	_add_visual_wrapper(definition)
+	_add_hardpoints()
+	_add_engine_effects()
+	_add_selection_and_shield()
+
+
+func _add_visual_wrapper(definition: Dictionary) -> void:
+	var wrapper: Node3D = null
+	var visual_scene_path: String = definition.get("visual_scene", "")
+	if not visual_scene_path.is_empty() and ResourceLoader.exists(visual_scene_path):
+		var packed: PackedScene = load(visual_scene_path)
+		wrapper = packed.instantiate()
+	else:
+		wrapper = VISUAL_WRAPPER.new()
+	if wrapper.has_method("setup"):
+		wrapper.setup(definition)
+	visual_root.add_child(wrapper)
+
+
+func _add_hardpoints() -> void:
+	for hardpoint_name in hardpoints.keys():
+		var marker := Marker3D.new()
+		marker.name = hardpoint_name
+		marker.position = _array_to_vec3(hardpoints[hardpoint_name])
+		if hardpoint_name.begins_with("Engine"):
+			engine_root.add_child(marker)
+		else:
+			hardpoint_root.add_child(marker)
+
+
+func _add_engine_effects() -> void:
+	var engine_markers: Array[Node] = engine_root.get_children()
+	if engine_markers.is_empty():
+		var fallback_marker := Marker3D.new()
+		fallback_marker.name = "EngineHardpoint01"
+		fallback_marker.position = Vector3(0, 0, visual_length * 0.52)
+		engine_root.add_child(fallback_marker)
+		engine_markers = engine_root.get_children()
+
+	for marker_node in engine_markers:
+		if not (marker_node is Node3D):
+			continue
+		var marker := marker_node as Node3D
+		var glow := MeshInstance3D.new()
+		glow.name = "%sGlow" % marker.name
+		var glow_mesh := SphereMesh.new()
+		glow_mesh.radius = max(4.0, visual_length * 0.035)
+		glow.mesh = glow_mesh
+		glow.position = marker.position
+		glow.material_override = _engine_material(0.45)
+		engine_root.add_child(glow)
+		engine_glows.append(glow)
+
+		var particles := GPUParticles3D.new()
+		particles.name = "%sTrail" % marker.name
+		particles.position = marker.position + Vector3(0, 0, visual_length * 0.035)
+		particles.amount = 28
+		particles.lifetime = 0.8
+		particles.emitting = true
+		var process_material := ParticleProcessMaterial.new()
+		process_material.direction = Vector3(0, 0, 1)
+		process_material.spread = 8.0
+		process_material.initial_velocity_min = max(20.0, visual_length * 0.22)
+		process_material.initial_velocity_max = max(35.0, visual_length * 0.32)
+		process_material.scale_min = 0.5
+		process_material.scale_max = 1.4
+		process_material.color = Color(0.15, 0.72, 1.0, 0.6)
+		particles.process_material = process_material
+		var particle_mesh := SphereMesh.new()
+		particle_mesh.radius = max(1.0, visual_length * 0.012)
+		particles.draw_pass_1 = particle_mesh
+		engine_root.add_child(particles)
+		engine_particles.append(particles)
+
+
+func _add_selection_and_shield() -> void:
+	var ring_radius: float = collision_radius * 1.08
 
 	selection_ring = MeshInstance3D.new()
 	var torus := TorusMesh.new()
-	torus.inner_radius = 3.4
-	torus.outer_radius = 3.48
+	torus.inner_radius = ring_radius
+	torus.outer_radius = ring_radius + max(2.0, visual_length * 0.012)
 	selection_ring.mesh = torus
 	selection_ring.rotation_degrees.x = 90
 	selection_ring.visible = false
@@ -254,11 +349,11 @@ func _build_placeholder_ship() -> void:
 	ring_material.emission_enabled = true
 	ring_material.emission = Color(0.1, 1.0, 0.85)
 	selection_ring.material_override = ring_material
-	add_child(selection_ring)
+	vfx_root.add_child(selection_ring)
 
 	shield_flash = MeshInstance3D.new()
 	var sphere := SphereMesh.new()
-	sphere.radius = 3.4
+	sphere.radius = ring_radius
 	shield_flash.mesh = sphere
 	var shield_material := StandardMaterial3D.new()
 	shield_material.albedo_color = Color(0.25, 0.65, 1.0, 0.16)
@@ -267,13 +362,29 @@ func _build_placeholder_ship() -> void:
 	shield_material.emission = Color(0.25, 0.65, 1.0)
 	shield_flash.material_override = shield_material
 	shield_flash.visible = false
-	add_child(shield_flash)
+	vfx_root.add_child(shield_flash)
 
-	for hardpoint_name in hardpoints.keys():
-		var marker := Marker3D.new()
-		marker.name = hardpoint_name
-		marker.position = _array_to_vec3(hardpoints[hardpoint_name])
-		add_child(marker)
+
+func _engine_material(intensity: float) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.1, 0.55, 1.0, 0.86)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.emission_enabled = true
+	material.emission = Color(0.1, 0.65, 1.0) * intensity
+	return material
+
+
+func _update_engine_effects() -> void:
+	var max_speed: float = max(1.0, float(stats.get("max_speed", 1.0)))
+	var thrust_ratio: float = clamp(velocity.length() / max_speed, 0.0, 1.0)
+	var intensity: float = 0.35 + thrust_ratio * 1.35
+	for glow in engine_glows:
+		var material := glow.material_override as StandardMaterial3D
+		if material != null:
+			material.emission = Color(0.1, 0.65, 1.0) * intensity
+			glow.scale = Vector3.ONE * (0.9 + thrust_ratio * 0.85)
+	for particles in engine_particles:
+		particles.speed_scale = 0.45 + thrust_ratio * 1.25
 
 
 func _flash_shield() -> void:
@@ -289,10 +400,21 @@ func _flash_shield() -> void:
 
 
 func _hardpoint_offset(hardpoint_name: String) -> Vector3:
-	var marker := get_node_or_null(hardpoint_name)
+	var marker := hardpoint_root.get_node_or_null(hardpoint_name) if hardpoint_root != null else null
+	if marker == null and engine_root != null:
+		marker = engine_root.get_node_or_null(hardpoint_name)
 	if marker is Marker3D:
 		return marker.global_position - global_position
-	return Vector3(0, 0.2, -2.4)
+	return Vector3(0, visual_length * 0.03, -visual_length * 0.5)
+
+
+func get_hardpoint_global_position(hardpoint_name: String) -> Vector3:
+	var marker := hardpoint_root.get_node_or_null(hardpoint_name) if hardpoint_root != null else null
+	if marker == null and engine_root != null:
+		marker = engine_root.get_node_or_null(hardpoint_name)
+	if marker is Marker3D:
+		return marker.global_position
+	return global_position + global_transform.basis * Vector3(0, visual_length * 0.03, -visual_length * 0.5)
 
 
 func _array_to_vec3(value: Variant) -> Vector3:

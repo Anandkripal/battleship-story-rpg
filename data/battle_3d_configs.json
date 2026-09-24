@@ -1,7 +1,32 @@
 {
   "prototype_fire_warship_trial": {
     "display_name": "Fire Warship Trial",
-    "battlefield_radius": 1600,
+    "battlefield_radius": 28000,
+    "intro": {
+      "enabled": true,
+      "duration": 5.0,
+      "message": "SENSOR WARNING: UNKNOWN CONTACTS DETECTED"
+    },
+    "environment": {
+      "starfield_count": 360,
+      "planet": {
+        "visual_model": "distant_planet_quaternius",
+        "position": [-12500, -2600, -34000],
+        "radius": 6200,
+        "color": [0.18, 0.34, 0.72]
+      },
+      "sun": {
+        "position": [24000, 12000, -18000],
+        "color": [1.0, 0.82, 0.52],
+        "energy": 2.5
+      },
+      "asteroid_field": {
+        "count": 34,
+        "center": [9400, -350, -11200],
+        "spread": [5600, 1400, 4400],
+        "visual_models": ["asteroid_rock_1", "asteroid_rock_2"]
+      }
+    },
     "player_fleet": {
       "faction": "player",
       "ships": [
@@ -22,7 +47,7 @@
           "id": "enemy_frigate_01",
           "definition": "enemy_frigate",
           "display_name": "Frigate Alpha",
-          "position": [520, 0, -480],
+          "position": [8200, 0, -19800],
           "weapons": ["enemy_pulse_cannon"],
           "ai_profile": "aggressive",
           "reward": {"source_points": 3, "materials": {"iron": 3, "copper": 1}}
@@ -31,7 +56,7 @@
           "id": "enemy_frigate_02",
           "definition": "enemy_frigate",
           "display_name": "Frigate Beta",
-          "position": [-620, 0, -520],
+          "position": [-7600, 340, -21400],
           "weapons": ["enemy_pulse_cannon"],
           "ai_profile": "maintain_range",
           "reward": {"source_points": 3, "materials": {"iron": 2, "energy_crystal": 1}}
@@ -40,11 +65,76 @@
           "id": "enemy_destroyer_01",
           "definition": "enemy_destroyer",
           "display_name": "Destroyer Gamma",
-          "position": [120, 0, -860],
+          "position": [1600, -120, -26600],
           "weapons": ["enemy_pulse_cannon", "missile_mk1"],
           "ai_profile": "cowardly",
           "reward": {"source_points": 8, "materials": {"iron": 5, "titanium": 2}}
+        },
+        {
+          "id": "enemy_cruiser_01",
+          "definition": "enemy_cruiser",
+          "display_name": "Cruiser Delta",
+          "position": [13200, 220, -33800],
+          "weapons": ["enemy_heavy_lance", "enemy_pulse_cannon", "missile_mk1"],
+          "ai_profile": "maintain_range",
+          "reward": {"source_points": 18, "materials": {"titanium": 4, "energy_crystal": 2}}
         }
+      ]
+    },
+    "reward_multiplier": 1.0
+  },
+  "prototype_performance_swarm": {
+    "display_name": "Performance Swarm Smoke",
+    "battlefield_radius": 32000,
+    "intro": {
+      "enabled": false
+    },
+    "environment": {
+      "starfield_count": 180,
+      "planet": {
+        "visual_model": "distant_planet_quaternius",
+        "position": [-15500, -3600, -38000],
+        "radius": 6200,
+        "color": [0.16, 0.28, 0.62]
+      },
+      "sun": {
+        "position": [24000, 12000, -18000],
+        "color": [1.0, 0.82, 0.52],
+        "energy": 2.2
+      },
+      "asteroid_field": {
+        "count": 12,
+        "center": [9800, -500, -12000],
+        "spread": [4600, 1000, 3200],
+        "visual_models": ["asteroid_rock_1", "asteroid_rock_2"]
+      }
+    },
+    "player_fleet": {
+      "faction": "player",
+      "ships": [
+        {
+          "id": "player_fire_warship",
+          "definition": "fire_warship_mk1",
+          "display_name": "Fire Warship",
+          "position": [0, 0, 0],
+          "weapons": ["main_cannon_mk1", "secondary_cannon_mk1", "missile_mk1"],
+          "ai_profile": "player"
+        }
+      ]
+    },
+    "enemy_fleet": {
+      "faction": "enemy",
+      "ships": [
+        {"id": "swarm_frigate_01", "definition": "enemy_frigate", "display_name": "Swarm Frigate 01", "position": [-9000, 0, -18500], "weapons": ["enemy_pulse_cannon"], "ai_profile": "aggressive", "reward": {"source_points": 1}},
+        {"id": "swarm_frigate_02", "definition": "enemy_frigate", "display_name": "Swarm Frigate 02", "position": [-7000, 180, -19800], "weapons": ["enemy_pulse_cannon"], "ai_profile": "aggressive", "reward": {"source_points": 1}},
+        {"id": "swarm_frigate_03", "definition": "enemy_frigate", "display_name": "Swarm Frigate 03", "position": [-4800, -120, -21000], "weapons": ["enemy_pulse_cannon"], "ai_profile": "aggressive", "reward": {"source_points": 1}},
+        {"id": "swarm_frigate_04", "definition": "enemy_frigate", "display_name": "Swarm Frigate 04", "position": [-2600, 220, -22200], "weapons": ["enemy_pulse_cannon"], "ai_profile": "aggressive", "reward": {"source_points": 1}},
+        {"id": "swarm_frigate_05", "definition": "enemy_frigate", "display_name": "Swarm Frigate 05", "position": [0, -150, -23400], "weapons": ["enemy_pulse_cannon"], "ai_profile": "aggressive", "reward": {"source_points": 1}},
+        {"id": "swarm_frigate_06", "definition": "enemy_frigate", "display_name": "Swarm Frigate 06", "position": [2600, 140, -22200], "weapons": ["enemy_pulse_cannon"], "ai_profile": "aggressive", "reward": {"source_points": 1}},
+        {"id": "swarm_frigate_07", "definition": "enemy_frigate", "display_name": "Swarm Frigate 07", "position": [4800, -180, -21000], "weapons": ["enemy_pulse_cannon"], "ai_profile": "aggressive", "reward": {"source_points": 1}},
+        {"id": "swarm_frigate_08", "definition": "enemy_frigate", "display_name": "Swarm Frigate 08", "position": [7000, 80, -19800], "weapons": ["enemy_pulse_cannon"], "ai_profile": "aggressive", "reward": {"source_points": 1}},
+        {"id": "swarm_destroyer_01", "definition": "enemy_destroyer", "display_name": "Swarm Destroyer 01", "position": [-3200, 0, -28200], "weapons": ["enemy_pulse_cannon", "missile_mk1"], "ai_profile": "maintain_range", "reward": {"source_points": 2}},
+        {"id": "swarm_destroyer_02", "definition": "enemy_destroyer", "display_name": "Swarm Destroyer 02", "position": [3200, 0, -28200], "weapons": ["enemy_pulse_cannon", "missile_mk1"], "ai_profile": "maintain_range", "reward": {"source_points": 2}}
       ]
     },
     "reward_multiplier": 1.0

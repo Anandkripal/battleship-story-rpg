@@ -95,6 +95,7 @@ See `docs/ADDING_A_MECHANIC.md`.
 - 3D weapons: edit `data/weapon_definitions.json`.
 - Fire Warship modules: edit `data/fire_warship_modules.json`.
 - 3D battle configs: edit `data/battle_3d_configs.json`.
+- 3D visual models: edit `data/visual_models.json` or local overrides.
 - Battle actions: edit `data/battle_actions.json` and reference them from ship abilities/modules.
 
 The UI builds from data where practical; it does not hardcode ability buttons or upgrade categories.
@@ -124,6 +125,7 @@ Headless smoke tests:
 Godot --headless --path . --script res://tools/run_validation.gd
 Godot --headless --path . --script res://tools/smoke_gameplay.gd
 Godot --headless --path . --script res://tools/smoke_battle_3d.gd
+Godot --headless --path . --script res://tools/smoke_battle_3d_performance.gd
 ```
 
 ## Copyright-Safe Public Repository
@@ -140,6 +142,12 @@ Private/local content belongs in ignored folders such as:
 - `chapters/private/`
 
 See `docs/PRIVATE_CONTENT_WORKFLOW.md`.
+
+## Optional Local 3D Asset Packs
+
+The 3D combat prototype can load local Quaternius CC0 asset packs from ignored folders under `assets/`. Public wrapper scenes and `data/visual_models.json` reference optional paths only; if the packs are absent, the game uses generated placeholder ship, planet, and asteroid visuals.
+
+Raw downloaded packs remain ignored and should not be committed. See `ATTRIBUTIONS.md` and `docs/THREE_D_GAMEPLAY.md`.
 
 ## Local Asset Manifest
 

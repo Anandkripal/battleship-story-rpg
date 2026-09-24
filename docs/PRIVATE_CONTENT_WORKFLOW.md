@@ -33,3 +33,9 @@ python tools/build_asset_manifest.py assets/private/ch01
 ```
 
 The script scans image filenames only. It does not OCR images, classify images, or invent descriptions.
+
+## Optional Local 3D Packs
+
+Large third-party asset packs used during local development can also live under ignored `assets/` folders. The current 3D prototype optionally resolves Quaternius CC0 models from ignored pack folders and falls back to generated public placeholders when those folders are absent.
+
+Do not move or rename the downloaded pack folders unless you also update `data/visual_models.json` or a local data override.

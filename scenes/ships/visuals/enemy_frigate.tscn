@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/ship_visual_wrapper.gd" id="1"]
+
+[node name="EnemyFrigateVisual" type="Node3D"]
+script = ExtResource("1")
+visual_model_id = "enemy_frigate_quaternius"
+fallback_shape = "frigate"
+fallback_length = 150.0
+fallback_color = Color(0.95, 0.22, 0.18, 1)
