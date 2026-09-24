@@ -378,6 +378,9 @@ func _build_hud() -> void:
 func _build_command_buttons() -> void:
 	for child in command_box.get_children():
 		child.queue_free()
+	_add_command_button("Main Cannon", func() -> void: _fire_weapon_by_id("main_cannon_mk1"))
+	_add_command_button("Secondary", func() -> void: _fire_weapon_by_id("secondary_cannon_mk1"))
+	_add_command_button("Missile", func() -> void: _fire_weapon_by_id("missile_mk1"))
 	_add_command_button("Approach", func() -> void:
 		if selected_ship != null and target_ship != null:
 			selected_ship.command_approach(target_ship)
@@ -571,6 +574,17 @@ func _fire_selected_weapon(index: int) -> void:
 		_log("Weapon fired.")
 	else:
 		_log("Weapon not ready or target out of range.")
+
+
+func _fire_weapon_by_id(weapon_id: String) -> void:
+	if selected_ship == null:
+		_log("No player ship selected.")
+		return
+	for index in range(selected_ship.weapons.size()):
+		if selected_ship.weapons[index].get("id", "") == weapon_id:
+			_fire_selected_weapon(index)
+			return
+	_log("Weapon is not installed: %s." % weapon_id)
 
 
 func _spawn_projectile(source: Variant, weapon_index: int, target: Variant) -> Node3D:

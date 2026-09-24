@@ -36,8 +36,14 @@ func _run() -> void:
 		errors.append("Expected target title plus 3 enemy target buttons.")
 	if battle.get("command_box") == null:
 		errors.append("Demo battle did not build command grid.")
-	elif battle.get("command_box").get_child_count() < 8:
+	elif battle.get("command_box").get_child_count() < 11:
 		errors.append("Expected all command buttons in compact command grid.")
+	elif not _has_button_text(battle.get("command_box"), "Main Cannon"):
+		errors.append("Command grid is missing Main Cannon button.")
+	elif not _has_button_text(battle.get("command_box"), "Secondary"):
+		errors.append("Command grid is missing Secondary button.")
+	elif not _has_button_text(battle.get("command_box"), "Missile"):
+		errors.append("Command grid is missing Missile button.")
 	if _count_loaded_optional_models(battle) > 0:
 		errors.append("Demo battle loaded optional model assets instead of fast fallback visuals.")
 	if _count_nodes_of_type(battle, "GPUParticles3D") > 0:
@@ -97,3 +103,10 @@ func _largest_control_right_edge(node: Node) -> float:
 	for child in node.get_children():
 		value = max(value, _largest_control_right_edge(child))
 	return value
+
+
+func _has_button_text(node: Node, text: String) -> bool:
+	for child in node.get_children():
+		if child is Button and child.text == text:
+			return true
+	return false
