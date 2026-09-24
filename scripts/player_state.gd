@@ -16,7 +16,12 @@ func reset() -> void:
 			"credits": 100,
 			"source_points": 5,
 			"ore": 0,
-			"alloys": 0
+			"alloys": 0,
+			"iron": 0,
+			"copper": 0,
+			"titanium": 0,
+			"titanium_crystal": 0,
+			"energy_crystal": 0
 		},
 		"stats": {
 			"physical_fitness": 1,
@@ -37,4 +42,13 @@ func to_dict() -> Dictionary:
 
 
 func from_dict(data: Dictionary) -> void:
-	state = data.duplicate(true)
+	reset()
+	_deep_merge(state, data)
+
+
+func _deep_merge(target: Dictionary, source: Dictionary) -> void:
+	for key in source.keys():
+		if target.get(key) is Dictionary and source[key] is Dictionary:
+			_deep_merge(target[key], source[key])
+		else:
+			target[key] = source[key]

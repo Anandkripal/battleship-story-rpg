@@ -11,6 +11,10 @@ const REQUIRED_FILES := [
 	"res://data/sectors.json",
 	"res://data/encounters.json",
 	"res://data/loot_tables.json",
+	"res://data/ship_definitions.json",
+	"res://data/weapon_definitions.json",
+	"res://data/fire_warship_modules.json",
+	"res://data/battle_3d_configs.json",
 	"res://data/upgrades.json",
 	"res://data/locations.json",
 	"res://data/mechanics.json",
@@ -20,7 +24,12 @@ const REQUIRED_FILES := [
 	"res://scenes/story_viewer.tscn",
 	"res://scenes/system_screen.tscn",
 	"res://scenes/star_map.tscn",
-	"res://scenes/chapter_complete.tscn"
+	"res://scenes/chapter_complete.tscn",
+	"res://scenes/combat/battle_3d.tscn",
+	"res://scenes/combat/ship_3d.tscn",
+	"res://scenes/combat/projectile_3d.tscn",
+	"res://scenes/combat/missile_3d.tscn",
+	"res://scenes/ship_management.tscn"
 ]
 
 

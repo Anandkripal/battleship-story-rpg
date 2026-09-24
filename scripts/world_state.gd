@@ -28,7 +28,23 @@ func reset() -> void:
 			"completed_encounters": {}
 		},
 		"objectives": {},
-		"active_arc": ""
+		"active_arc": "",
+		"calendar": {
+			"year": 10103,
+			"month": 6,
+			"day": 1,
+			"hour": 8
+		},
+		"alternate_space": {
+			"cooldown_days": 30,
+			"last_entry_day": -9999,
+			"available": true,
+			"current_expedition": {},
+			"destination_seed": 1001,
+			"reward_multiplier": 1.0,
+			"return_state": {}
+		},
+		"last_battle_result": {}
 	}
 
 
@@ -37,8 +53,17 @@ func to_dict() -> Dictionary:
 
 
 func from_dict(data: Dictionary) -> void:
-	state = data.duplicate(true)
+	reset()
+	_deep_merge(state, data)
 	if not state.has("flags") and state.has("world_flags"):
 		state["flags"] = state["world_flags"]
 	if not state.has("world_flags") and state.has("flags"):
 		state["world_flags"] = state["flags"]
+
+
+func _deep_merge(target: Dictionary, source: Dictionary) -> void:
+	for key in source.keys():
+		if target.get(key) is Dictionary and source[key] is Dictionary:
+			_deep_merge(target[key], source[key])
+		else:
+			target[key] = source[key]

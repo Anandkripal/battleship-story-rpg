@@ -1,0 +1,52 @@
+{
+  "prototype_fire_warship_trial": {
+    "display_name": "Fire Warship Trial",
+    "battlefield_radius": 1600,
+    "player_fleet": {
+      "faction": "player",
+      "ships": [
+        {
+          "id": "player_fire_warship",
+          "definition": "fire_warship_mk1",
+          "display_name": "Fire Warship",
+          "position": [0, 0, 0],
+          "weapons": ["main_cannon_mk1", "secondary_cannon_mk1", "missile_mk1"],
+          "ai_profile": "player"
+        }
+      ]
+    },
+    "enemy_fleet": {
+      "faction": "enemy",
+      "ships": [
+        {
+          "id": "enemy_frigate_01",
+          "definition": "enemy_frigate",
+          "display_name": "Frigate Alpha",
+          "position": [520, 0, -480],
+          "weapons": ["enemy_pulse_cannon"],
+          "ai_profile": "aggressive",
+          "reward": {"source_points": 3, "materials": {"iron": 3, "copper": 1}}
+        },
+        {
+          "id": "enemy_frigate_02",
+          "definition": "enemy_frigate",
+          "display_name": "Frigate Beta",
+          "position": [-620, 0, -520],
+          "weapons": ["enemy_pulse_cannon"],
+          "ai_profile": "maintain_range",
+          "reward": {"source_points": 3, "materials": {"iron": 2, "energy_crystal": 1}}
+        },
+        {
+          "id": "enemy_destroyer_01",
+          "definition": "enemy_destroyer",
+          "display_name": "Destroyer Gamma",
+          "position": [120, 0, -860],
+          "weapons": ["enemy_pulse_cannon", "missile_mk1"],
+          "ai_profile": "cowardly",
+          "reward": {"source_points": 8, "materials": {"iron": 5, "titanium": 2}}
+        }
+      ]
+    },
+    "reward_multiplier": 1.0
+  }
+}

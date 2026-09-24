@@ -1,0 +1,50 @@
+{
+  "main_cannon_mk1": {
+    "display_name": "Main Cannon",
+    "weapon_type": "projectile",
+    "damage": 42,
+    "range": 760,
+    "cooldown": 3.8,
+    "projectile_speed": 145,
+    "energy_cost": 22,
+    "accuracy": 0.88,
+    "visual_effect": "projectile",
+    "sound_hook": ""
+  },
+  "secondary_cannon_mk1": {
+    "display_name": "Secondary Cannon",
+    "weapon_type": "projectile",
+    "damage": 18,
+    "range": 520,
+    "cooldown": 1.4,
+    "projectile_speed": 180,
+    "energy_cost": 10,
+    "accuracy": 0.82,
+    "visual_effect": "projectile",
+    "sound_hook": ""
+  },
+  "missile_mk1": {
+    "display_name": "Missile",
+    "weapon_type": "missile",
+    "damage": 70,
+    "range": 1050,
+    "cooldown": 7.0,
+    "projectile_speed": 95,
+    "energy_cost": 28,
+    "accuracy": 0.76,
+    "visual_effect": "missile",
+    "sound_hook": ""
+  },
+  "enemy_pulse_cannon": {
+    "display_name": "Pulse Cannon",
+    "weapon_type": "projectile",
+    "damage": 22,
+    "range": 620,
+    "cooldown": 2.2,
+    "projectile_speed": 135,
+    "energy_cost": 12,
+    "accuracy": 0.78,
+    "visual_effect": "projectile",
+    "sound_hook": ""
+  }
+}

@@ -9,11 +9,20 @@ const REQUIRED_FILES := [
 	"res://data/sectors.json",
 	"res://data/encounters.json",
 	"res://data/loot_tables.json",
+	"res://data/ship_definitions.json",
+	"res://data/weapon_definitions.json",
+	"res://data/fire_warship_modules.json",
+	"res://data/battle_3d_configs.json",
 	"res://data/upgrades.json",
 	"res://data/locations.json",
 	"res://data/mechanics.json",
 	"res://assets/asset_manifest.json",
-	"res://chapters/demo/chapter_001.json"
+	"res://chapters/demo/chapter_001.json",
+	"res://scenes/combat/battle_3d.tscn",
+	"res://scenes/combat/ship_3d.tscn",
+	"res://scenes/combat/projectile_3d.tscn",
+	"res://scenes/combat/missile_3d.tscn",
+	"res://scenes/ship_management.tscn"
 ]
 
 

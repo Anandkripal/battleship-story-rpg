@@ -1,0 +1,92 @@
+{
+  "fire_warship_mk1": {
+    "display_name": "Fire Warship",
+    "ship_class": "warship",
+    "faction": "player",
+    "base_scene": "res://scenes/combat/ship_3d.tscn",
+    "mesh": "box",
+    "combat_rating": "F+",
+    "base_stats": {
+      "max_hull": 420,
+      "max_armor": 260,
+      "max_shield": 180,
+      "shield_recharge": 5,
+      "max_speed": 34,
+      "acceleration": 10,
+      "turn_rate": 1.8,
+      "sensor_range": 1200,
+      "sensor_strength": 85,
+      "signature": 85,
+      "energy_capacity": 160,
+      "energy_recharge": 14
+    },
+    "standard_slots": ["main_gun", "armor", "engine", "radar", "shield", "hull_structure"],
+    "additional_slots": ["special_01"],
+    "hardpoints": {
+      "WeaponHardpoint01": [0, 0.35, -2.8],
+      "WeaponHardpoint02": [1.5, 0.15, -1.2],
+      "EngineHardpoint01": [0, 0, 3.1],
+      "SpecialModule01": [-1.5, 0.35, -1.2]
+    },
+    "evolution_targets": ["fire_warship_mk2_placeholder"]
+  },
+  "enemy_frigate": {
+    "display_name": "Enemy Frigate",
+    "ship_class": "frigate",
+    "faction": "enemy",
+    "base_scene": "res://scenes/combat/ship_3d.tscn",
+    "mesh": "box",
+    "combat_rating": "F",
+    "base_stats": {
+      "max_hull": 180,
+      "max_armor": 95,
+      "max_shield": 75,
+      "shield_recharge": 3,
+      "max_speed": 28,
+      "acceleration": 8,
+      "turn_rate": 1.5,
+      "sensor_range": 850,
+      "sensor_strength": 45,
+      "signature": 70,
+      "energy_capacity": 90,
+      "energy_recharge": 8
+    },
+    "standard_slots": ["main_gun", "engine", "radar"],
+    "additional_slots": [],
+    "hardpoints": {
+      "WeaponHardpoint01": [0, 0.25, -1.8],
+      "EngineHardpoint01": [0, 0, 2.0]
+    },
+    "evolution_targets": []
+  },
+  "enemy_destroyer": {
+    "display_name": "Enemy Destroyer",
+    "ship_class": "destroyer",
+    "faction": "enemy",
+    "base_scene": "res://scenes/combat/ship_3d.tscn",
+    "mesh": "box",
+    "combat_rating": "E",
+    "base_stats": {
+      "max_hull": 300,
+      "max_armor": 160,
+      "max_shield": 125,
+      "shield_recharge": 4,
+      "max_speed": 22,
+      "acceleration": 6,
+      "turn_rate": 1.1,
+      "sensor_range": 1000,
+      "sensor_strength": 60,
+      "signature": 105,
+      "energy_capacity": 125,
+      "energy_recharge": 10
+    },
+    "standard_slots": ["main_gun", "secondary_weapon", "engine", "radar"],
+    "additional_slots": [],
+    "hardpoints": {
+      "WeaponHardpoint01": [0, 0.3, -2.3],
+      "WeaponHardpoint02": [1.2, 0.2, -1.0],
+      "EngineHardpoint01": [0, 0, 2.4]
+    },
+    "evolution_targets": []
+  }
+}

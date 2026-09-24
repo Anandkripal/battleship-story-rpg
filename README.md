@@ -54,7 +54,9 @@ Reusable gameplay systems include:
 
 - `exploration`: data-driven sector nodes, connections, objective destinations, optional encounters, repair nodes, and resources.
 - `battle`: real-time tactical combat with click-to-move, weapon ranges, cooldowns, energy allocation, obstacles, AI profiles, and salvage.
+- `battle_3d`: 3D Fire Warship prototype with orbit camera, sensors, targeting, shield/armor/hull, energy, AI enemies, retreat, and battle reports.
 - `loadout`: module inspection and simple module installation from `data/modules.json`.
+- `ship_management`: Fire Warship module upgrades using Source Points and materials.
 - `scan`, `mining`, `upgrade`, and `map`: supporting mechanics for tutorial and progression beats.
 
 ## Chapter/Event Format
@@ -89,6 +91,10 @@ See `docs/ADDING_A_MECHANIC.md`.
 - Modules: edit `data/modules.json` or add private overrides in `data/private/modules.local.json`.
 - Sectors and encounters: edit `data/sectors.json` / `data/encounters.json` or use local overrides.
 - Loot tables: edit `data/loot_tables.json`.
+- 3D ships: edit `data/ship_definitions.json`.
+- 3D weapons: edit `data/weapon_definitions.json`.
+- Fire Warship modules: edit `data/fire_warship_modules.json`.
+- 3D battle configs: edit `data/battle_3d_configs.json`.
 - Battle actions: edit `data/battle_actions.json` and reference them from ship abilities/modules.
 
 The UI builds from data where practical; it does not hardcode ability buttons or upgrade categories.
@@ -111,6 +117,14 @@ Chapter files may end with `kind: "chapter_boundary"` when a serialized scene sh
 ## Validation
 
 Use the main menu **Validate Project** button to run in-game validation. If Godot is available in your shell, you can also run the project headlessly using the Godot executable for parser/import checks.
+
+Headless smoke tests:
+
+```bash
+Godot --headless --path . --script res://tools/run_validation.gd
+Godot --headless --path . --script res://tools/smoke_gameplay.gd
+Godot --headless --path . --script res://tools/smoke_battle_3d.gd
+```
 
 ## Copyright-Safe Public Repository
 

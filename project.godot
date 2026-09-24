@@ -30,6 +30,7 @@ ChapterManager="*res://scripts/chapter_manager.gd"
 SaveManager="*res://scripts/save_manager.gd"
 ValidationManager="*res://scripts/validation_manager.gd"
 EventRunner="*res://scripts/event_runner.gd"
+GameEventManager="*res://scripts/game_event_manager.gd"
 
 [display]
 

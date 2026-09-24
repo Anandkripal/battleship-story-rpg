@@ -52,7 +52,29 @@ func reset() -> void:
 		"abilities": [
 			"main_cannon",
 			"defend"
-		]
+		],
+		"active_hull": "fire_warship_mk1",
+		"fire_warship": {
+			"ship_definition": "fire_warship_mk1",
+			"module_levels": {
+				"main_gun": 1,
+				"armor": 1,
+				"engine": 1,
+				"radar": 1,
+				"shield": 1,
+				"hull_structure": 1,
+				"emergency_repair": 1
+			},
+			"equipped_modules": {
+				"main_gun": "fw_main_cannon_common",
+				"armor": "fw_armor_common",
+				"engine": "fw_engine_common",
+				"radar": "fw_radar_common",
+				"shield": "fw_shield_common",
+				"hull_structure": "fw_hull_common",
+				"special_01": "fw_emergency_repair_common"
+			}
+		}
 	}
 
 
@@ -61,4 +83,13 @@ func to_dict() -> Dictionary:
 
 
 func from_dict(data: Dictionary) -> void:
-	ship_data = data.duplicate(true)
+	reset()
+	_deep_merge(ship_data, data)
+
+
+func _deep_merge(target: Dictionary, source: Dictionary) -> void:
+	for key in source.keys():
+		if target.get(key) is Dictionary and source[key] is Dictionary:
+			_deep_merge(target[key], source[key])
+		else:
+			target[key] = source[key]

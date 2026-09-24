@@ -37,8 +37,12 @@ The current reusable gameplay layers are:
 - `battle`: real-time tactical ship combat with click-to-move, target range, cooldowns, energy distribution, simple obstacles, deterministic AI profiles, and salvage rewards.
 - `loadout`: data-driven module inspection and simple module installation.
 - `mining`, `scan`, `upgrade`, and `map`: earlier mechanics that remain available for chapters and tutorials.
+- `battle_3d`: separate 3D ship combat prototype launched through `GameEventManager`.
+- `ship_management`: Fire Warship module preview and upgrade screen.
 
 Combat state is explicit and data-driven where practical: ships use stable IDs, modules reference action IDs, enemy behavior comes from `ai_profile`, and battle rewards can come from enemy data plus loot tables. This keeps the single-player prototype easier to evolve toward future fleet or multiplayer systems without coupling the simulation to one chapter.
+
+See `docs/THREE_D_GAMEPLAY.md` for the 3D gameplay layer.
 
 ## Dynamic State
 
@@ -68,6 +72,10 @@ The public demo uses JSON files in `data/`:
 - `sectors.json`
 - `encounters.json`
 - `loot_tables.json`
+- `ship_definitions.json`
+- `weapon_definitions.json`
+- `fire_warship_modules.json`
+- `battle_3d_configs.json`
 - `upgrades.json`
 - `locations.json`
 - `mechanics.json`
