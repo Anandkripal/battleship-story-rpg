@@ -138,6 +138,8 @@ The playable trial uses a large planet, a directional sun, a starfield, visual a
 
 For quick testing from the main menu, use **Demo Battle**. It loads `demo_visible_battle`, skips the chapter system and cinematic delay, selects/scans the first enemy automatically, and starts with the Fire Warship and hostile contacts in frame.
 
+`demo_visible_battle` is tuned for playability rather than asset review. It sets `performance_mode: true` and `use_optional_models: false`, so it uses generated ship/environment visuals, fewer stars/asteroids, no glow pass, and no engine particle trails. Keep this path fast; use separate configs when testing heavier local models.
+
 ## Ship Management
 
 `scenes/ship_management.tscn` shows the Fire Warship preview, equipped modules, costs, current stats, next-level stats, and an upgrade button. Upgrades call `GameEventManager.upgrade_fire_warship_module()`, deduct resources, update module levels, and save.

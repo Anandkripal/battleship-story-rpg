@@ -7,6 +7,7 @@ func _init() -> void:
 
 func _run() -> void:
 	var errors: Array[String] = []
+	var start_msec: int = Time.get_ticks_msec()
 	var packed: PackedScene = load("res://scenes/combat/battle_3d.tscn")
 	if packed == null:
 		print("Demo battle smoke failed: missing battle scene")
@@ -29,6 +30,10 @@ func _run() -> void:
 		errors.append("Demo camera starts too far away.")
 	if battle.get("intro_active"):
 		errors.append("Demo battle should skip the cinematic intro.")
+	if _count_loaded_optional_models(battle) > 0:
+		errors.append("Demo battle loaded optional model assets instead of fast fallback visuals.")
+	if _count_nodes_of_type(battle, "GPUParticles3D") > 0:
+		errors.append("Demo battle spawned engine particle nodes in performance mode.")
 
 	var camera: Camera3D = battle.get("camera")
 	var selected_ship: Variant = battle.get("selected_ship")
@@ -39,8 +44,12 @@ func _run() -> void:
 		if not camera.is_position_in_frustum(target_ship.global_position):
 			errors.append("Selected target is outside the opening camera frustum.")
 
+	var elapsed_msec: int = Time.get_ticks_msec() - start_msec
+	if elapsed_msec > 3000:
+		errors.append("Demo battle startup took too long: %sms." % elapsed_msec)
+
 	if errors.is_empty():
-		print("Demo battle smoke test passed.")
+		print("Demo battle smoke test passed in %sms." % elapsed_msec)
 		quit(0)
 		return
 
@@ -48,3 +57,22 @@ func _run() -> void:
 	for error in errors:
 		print("- %s" % error)
 	quit(1)
+
+
+func _count_loaded_optional_models(node: Node) -> int:
+	var count := 0
+	var value: Variant = node.get("model_loaded")
+	if value is bool and value:
+		count += 1
+	for child in node.get_children():
+		count += _count_loaded_optional_models(child)
+	return count
+
+
+func _count_nodes_of_type(node: Node, type_name: String) -> int:
+	var count := 0
+	if node.get_class() == type_name:
+		count += 1
+	for child in node.get_children():
+		count += _count_nodes_of_type(child, type_name)
+	return count

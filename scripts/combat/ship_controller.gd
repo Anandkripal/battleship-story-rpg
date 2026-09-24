@@ -38,6 +38,8 @@ var engine_particles: Array[GPUParticles3D] = []
 var selection_ring: MeshInstance3D
 var shield_flash: MeshInstance3D
 var marker_label: Label3D
+var engine_particles_enabled := true
+var marker_labels_enabled := true
 
 
 func setup(config: Dictionary, definition: Dictionary, weapon_defs: Dictionary) -> void:
@@ -56,6 +58,8 @@ func setup(config: Dictionary, definition: Dictionary, weapon_defs: Dictionary) 
 	energy = float(stats.get("energy_capacity", 100))
 	visual_length = float(definition.get("visual_length", stats.get("visual_length", 120.0)))
 	collision_radius = max(24.0, visual_length * 0.48)
+	engine_particles_enabled = bool(definition.get("engine_particles_enabled", true))
+	marker_labels_enabled = bool(definition.get("marker_labels_enabled", true))
 	hardpoints = definition.get("hardpoints", {}).duplicate(true)
 	for weapon_id in config.get("weapons", []):
 		if weapon_defs.has(weapon_id):
@@ -321,26 +325,27 @@ func _add_engine_effects() -> void:
 		engine_root.add_child(glow)
 		engine_glows.append(glow)
 
-		var particles := GPUParticles3D.new()
-		particles.name = "%sTrail" % marker.name
-		particles.position = marker.position + Vector3(0, 0, visual_length * 0.035)
-		particles.amount = 28
-		particles.lifetime = 0.8
-		particles.emitting = true
-		var process_material := ParticleProcessMaterial.new()
-		process_material.direction = Vector3(0, 0, 1)
-		process_material.spread = 8.0
-		process_material.initial_velocity_min = max(20.0, visual_length * 0.22)
-		process_material.initial_velocity_max = max(35.0, visual_length * 0.32)
-		process_material.scale_min = 0.5
-		process_material.scale_max = 1.4
-		process_material.color = Color(0.15, 0.72, 1.0, 0.6)
-		particles.process_material = process_material
-		var particle_mesh := SphereMesh.new()
-		particle_mesh.radius = max(1.0, visual_length * 0.012)
-		particles.draw_pass_1 = particle_mesh
-		engine_root.add_child(particles)
-		engine_particles.append(particles)
+		if engine_particles_enabled:
+			var particles := GPUParticles3D.new()
+			particles.name = "%sTrail" % marker.name
+			particles.position = marker.position + Vector3(0, 0, visual_length * 0.035)
+			particles.amount = 12
+			particles.lifetime = 0.45
+			particles.emitting = true
+			var process_material := ParticleProcessMaterial.new()
+			process_material.direction = Vector3(0, 0, 1)
+			process_material.spread = 6.0
+			process_material.initial_velocity_min = max(20.0, visual_length * 0.16)
+			process_material.initial_velocity_max = max(35.0, visual_length * 0.24)
+			process_material.scale_min = 0.35
+			process_material.scale_max = 0.9
+			process_material.color = Color(0.15, 0.72, 1.0, 0.45)
+			particles.process_material = process_material
+			var particle_mesh := SphereMesh.new()
+			particle_mesh.radius = max(1.0, visual_length * 0.008)
+			particles.draw_pass_1 = particle_mesh
+			engine_root.add_child(particles)
+			engine_particles.append(particles)
 
 
 func _add_selection_and_shield() -> void:
@@ -375,13 +380,15 @@ func _add_selection_and_shield() -> void:
 
 
 func _add_marker_label() -> void:
+	if not marker_labels_enabled:
+		return
 	marker_label = Label3D.new()
 	marker_label.name = "TacticalLabel"
 	marker_label.text = display_name
 	marker_label.position = Vector3(0, max(90.0, visual_length * 0.42), 0)
 	marker_label.font_size = 42
 	marker_label.pixel_size = max(0.9, visual_length * 0.006)
-	marker_label.outline_size = 8
+	marker_label.outline_size = 4
 	marker_label.outline_modulate = Color(0.0, 0.0, 0.0, 0.9)
 	marker_label.modulate = Color(0.35, 0.95, 1.0) if faction == "player" else Color(1.0, 0.35, 0.24)
 	marker_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED

@@ -148,6 +148,8 @@ See `docs/PRIVATE_CONTENT_WORKFLOW.md`.
 
 The 3D combat prototype can load local Quaternius CC0 asset packs from ignored folders under `assets/`. Public wrapper scenes and `data/visual_models.json` reference optional paths only; if the packs are absent, the game uses generated placeholder ship, planet, and asteroid visuals.
 
+The main **Demo Battle** intentionally uses fast generated visuals by default so it stays playable on macOS while combat feel is being tuned. Heavier optional local models can still be used by other battle configs for asset-review passes.
+
 Raw downloaded packs remain ignored and should not be committed. See `ATTRIBUTIONS.md` and `docs/THREE_D_GAMEPLAY.md`.
 
 ## Local Asset Manifest

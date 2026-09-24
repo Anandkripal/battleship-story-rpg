@@ -169,7 +169,7 @@ func _build_world() -> void:
 	var env_data: Dictionary = config.get("environment", {})
 	env.ambient_light_color = _array_to_color(env_data.get("ambient_color", [0.11, 0.14, 0.2]), Color(0.11, 0.14, 0.2))
 	env.ambient_light_energy = float(env_data.get("ambient_energy", 0.8))
-	env.glow_enabled = true
+	env.glow_enabled = bool(env_data.get("glow_enabled", not _performance_mode()))
 	env.glow_intensity = float(env_data.get("glow_intensity", 0.38))
 	environment.environment = env
 	add_child(environment)
@@ -252,13 +252,15 @@ func _add_sun(position_value: Vector3, color: Color) -> void:
 func _add_planet(planet_data: Dictionary) -> void:
 	if planet_data.is_empty():
 		return
-	var planet: Node3D = MODEL_CATALOG.instantiate_model(planet_data.get("visual_model", ""))
+	var planet: Node3D = null
+	if not _performance_mode() and bool(config.get("use_optional_models", true)):
+		planet = MODEL_CATALOG.instantiate_model(planet_data.get("visual_model", ""))
 	if planet == null:
 		var mesh_instance := MeshInstance3D.new()
 		var mesh := SphereMesh.new()
 		mesh.radius = float(planet_data.get("radius", 6200.0))
-		mesh.radial_segments = 64
-		mesh.rings = 32
+		mesh.radial_segments = 24 if _performance_mode() else 64
+		mesh.rings = 12 if _performance_mode() else 32
 		mesh_instance.mesh = mesh
 		mesh_instance.material_override = _solid_material(_array_to_color(planet_data.get("color", [0.18, 0.34, 0.72]), Color(0.18, 0.34, 0.72)), Color(0.03, 0.07, 0.14))
 		planet = mesh_instance
@@ -275,7 +277,7 @@ func _add_asteroid_field(field_data: Dictionary) -> void:
 	var visual_models: Array = field_data.get("visual_models", [])
 	for index in range(count):
 		var asteroid: Node3D = null
-		if not visual_models.is_empty():
+		if not _performance_mode() and bool(config.get("use_optional_models", true)) and not visual_models.is_empty():
 			asteroid = MODEL_CATALOG.instantiate_model(str(visual_models[index % visual_models.size()]))
 		if asteroid == null:
 			asteroid = _fallback_asteroid(float(index))
@@ -469,6 +471,10 @@ func _spawn_fleet(fleet: Dictionary, target_array: Array) -> void:
 		var definition: Dictionary = ship_definitions.get(ship_config.get("definition", ""), {})
 		if definition.is_empty():
 			continue
+		definition = definition.duplicate(true)
+		if _performance_mode() or not bool(config.get("use_optional_models", true)):
+			definition["force_fallback_visuals"] = true
+			definition["engine_particles_enabled"] = false
 		var scene_path: String = definition.get("base_scene", SHIP_SCENE)
 		var packed: PackedScene = load(scene_path)
 		var ship: Variant = packed.instantiate()
@@ -931,6 +937,10 @@ func _solid_material(albedo: Color, emission: Color = Color.BLACK) -> StandardMa
 		material.emission_enabled = true
 		material.emission = emission
 	return material
+
+
+func _performance_mode() -> bool:
+	return bool(config.get("performance_mode", false))
 
 
 func _array_to_color(value: Variant, fallback: Color) -> Color:

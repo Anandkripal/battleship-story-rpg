@@ -15,7 +15,9 @@ var model_loaded := false
 
 
 func setup(definition: Dictionary) -> void:
-	if visual_model_id.is_empty():
+	if bool(definition.get("force_fallback_visuals", false)):
+		visual_model_id = ""
+	elif visual_model_id.is_empty():
 		visual_model_id = definition.get("visual_model", "")
 	fallback_shape = definition.get("fallback_shape", fallback_shape)
 	fallback_length = float(definition.get("visual_length", fallback_length))

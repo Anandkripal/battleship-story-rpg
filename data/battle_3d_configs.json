@@ -2,6 +2,8 @@
   "demo_visible_battle": {
     "display_name": "Standalone Demo Battle",
     "battlefield_radius": 14000,
+    "performance_mode": true,
+    "use_optional_models": false,
     "auto_select_first_enemy": true,
     "keep_opening_camera_after_intro": true,
     "intro": {
@@ -15,10 +17,11 @@
       "distance": 6200
     },
     "environment": {
-      "starfield_count": 260,
+      "starfield_count": 90,
       "ambient_color": [0.16, 0.19, 0.28],
       "ambient_energy": 1.05,
-      "glow_intensity": 0.48,
+      "glow_enabled": false,
+      "glow_intensity": 0.0,
       "planet": {
         "visual_model": "distant_planet_quaternius",
         "position": [-7200, -1600, -18000],
@@ -31,7 +34,7 @@
         "energy": 3.1
       },
       "asteroid_field": {
-        "count": 14,
+        "count": 5,
         "center": [3900, -160, -4400],
         "spread": [3600, 700, 2300],
         "visual_models": ["asteroid_rock_1", "asteroid_rock_2"]
