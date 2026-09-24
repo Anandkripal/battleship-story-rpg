@@ -31,5 +31,6 @@ func set_full_rect() -> void:
 func make_button(text: String) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(0, 58)
+	button.custom_minimum_size = Vector2(0, 62)
+	button.add_theme_font_size_override("font_size", 24)
 	return button

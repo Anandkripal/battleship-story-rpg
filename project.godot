@@ -33,16 +33,19 @@ EventRunner="*res://scripts/event_runner.gd"
 
 [display]
 
-window/size/viewport_width=720
-window/size/viewport_height=1280
-window/size/window_width_override=432
-window/size/window_height_override=768
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=1152
+window/size/window_height_override=648
+window/size/resizable=true
 window/stretch/mode="canvas_items"
-window/handheld/orientation=1
+window/stretch/aspect="keep"
+window/handheld/orientation=0
 
 [input_devices]
 
 pointing/emulate_touch_from_mouse=true
+pointing/emulate_mouse_from_touch=true
 
 [rendering]
 

@@ -1,6 +1,6 @@
 # Battleship Story RPG
 
-A Godot 4 framework for a portrait, story-driven sci-fi battleship progression game. The public repository contains only engine code, JSON demo data, and original placeholder assets.
+A Godot 4 framework for a landscape, story-driven sci-fi battleship progression game. The public repository contains only engine code, JSON demo data, and original placeholder assets.
 
 ## Screenshots
 
@@ -16,8 +16,8 @@ This keeps future chapter systems flexible. A later chapter can introduce scanni
 
 - Godot 4.x
 - Primary development platform: macOS
-- Layout: portrait, 720 x 1280 base resolution
-- Future export targets: Android and iOS
+- Layout: 16:9 landscape, 1280 x 720 base resolution
+- Future export targets: Android and iOS, designed for landscape orientation
 
 ## Running The Demo
 
@@ -28,6 +28,8 @@ This keeps future chapter systems flexible. A later chapter can introduce scanni
 The demo flow covers:
 
 `Main Menu -> Story -> Narration -> Choice -> Scan -> Story -> Map -> Mining -> Battle -> Reward -> Upgrade -> Chapter Complete`
+
+The story viewer supports landscape layouts such as `bottom_dialogue`, `side_dialogue`, `full_art`, `cinematic`, and `split`. Tall chapter images can be shown with display modes such as `fit`, `crop`, `focus_crop`, `split_layout`, `background_blur`, and `panel_sequence`.
 
 ## Architecture Summary
 

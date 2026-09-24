@@ -6,8 +6,10 @@ var action_data: Dictionary = {}
 var player_hull := 0
 var enemy_hull := 0
 var defending := false
-var status_label: Label
-var actions_box: VBoxContainer
+var enemy_status: Label
+var player_status: Label
+var battle_log: Label
+var actions_box: HBoxContainer
 
 
 func start(new_params: Dictionary) -> void:
@@ -25,60 +27,103 @@ func start(new_params: Dictionary) -> void:
 func _build_ui() -> void:
 	set_full_rect()
 	var background := ColorRect.new()
-	background.color = Color(0.08, 0.04, 0.06)
+	background.color = Color(0.070, 0.030, 0.045)
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 42)
-	margin.add_theme_constant_override("margin_bottom", 42)
+	margin.add_theme_constant_override("margin_left", 38)
+	margin.add_theme_constant_override("margin_right", 38)
+	margin.add_theme_constant_override("margin_top", 30)
+	margin.add_theme_constant_override("margin_bottom", 30)
 	add_child(margin)
 
-	var layout := VBoxContainer.new()
-	layout.add_theme_constant_override("separation", 14)
-	margin.add_child(layout)
+	var root := VBoxContainer.new()
+	root.add_theme_constant_override("separation", 16)
+	margin.add_child(root)
+
+	var arena := HBoxContainer.new()
+	arena.add_theme_constant_override("separation", 22)
+	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(arena)
+
+	arena.add_child(_build_ship_panel("Enemy Ship", true))
+	arena.add_child(_build_ship_panel("Player Ship", false))
+
+	battle_log = Label.new()
+	battle_log.add_theme_font_size_override("font_size", 24)
+	battle_log.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	battle_log.custom_minimum_size = Vector2(0, 62)
+	root.add_child(battle_log)
+
+	actions_box = HBoxContainer.new()
+	actions_box.add_theme_constant_override("separation", 12)
+	root.add_child(actions_box)
+
+
+func _build_ship_panel(title_text: String, is_enemy: bool) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 14)
+	panel.add_child(stack)
 
 	var title := Label.new()
-	title.text = "Ship Battle"
+	title.text = title_text
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 32)
-	layout.add_child(title)
+	stack.add_child(title)
 
-	status_label = Label.new()
-	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	layout.add_child(status_label)
+	var art := Label.new()
+	art.text = "      /\\\n ____/  \\____\n<____________>\n    /____\\"
+	art.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	art.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	art.add_theme_font_size_override("font_size", 30)
+	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stack.add_child(art)
 
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	layout.add_child(spacer)
+	var status := Label.new()
+	status.add_theme_font_size_override("font_size", 26)
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(status)
 
-	actions_box = VBoxContainer.new()
-	actions_box.add_theme_constant_override("separation", 10)
-	layout.add_child(actions_box)
+	if is_enemy:
+		enemy_status = status
+	else:
+		player_status = status
+
+	return panel
 
 
 func _refresh(extra_log: String = "") -> void:
-	status_label.text = "Player Hull: %s\n%s Hull: %s\n%s" % [
-		player_hull,
+	enemy_status.text = "%s\nHull: %s  Armor: %s" % [
 		enemy.get("name", "Enemy"),
 		enemy_hull,
-		extra_log
+		enemy.get("stats", {}).get("armor", "-")
 	]
+	player_status.text = "%s\nHull: %s  Armor: %s" % [
+		_singleton("ShipState").ship_data.get("name", "Player Ship"),
+		player_hull,
+		_singleton("ShipState").ship_data.get("stats", {}).get("armor", "-")
+	]
+	battle_log.text = extra_log
 
 	for child in actions_box.get_children():
 		child.queue_free()
 
 	if enemy_hull <= 0:
 		var victory := make_button("Claim Victory")
+		victory.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		victory.pressed.connect(_finish_victory)
 		actions_box.add_child(victory)
 		return
 
 	if player_hull <= 0:
 		var retry := make_button("Retry Battle")
+		retry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		retry.pressed.connect(_retry)
 		actions_box.add_child(retry)
 		return
@@ -86,6 +131,7 @@ func _refresh(extra_log: String = "") -> void:
 	for action_id in _get_player_action_ids():
 		var action: Dictionary = action_data.get(action_id, {})
 		var button := make_button(action.get("name", action_id.capitalize()))
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.pressed.connect(func() -> void: _use_action(action_id))
 		actions_box.add_child(button)
 
