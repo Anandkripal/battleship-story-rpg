@@ -38,6 +38,18 @@ func validate_project() -> Array:
 	if chapter is Dictionary:
 		_validate_chapter(chapter, mechanics if mechanics is Dictionary else {}, errors)
 
+	if FileAccess.file_exists("res://chapters/private/chapter_001.json"):
+		errors.append_array(validate_chapter_path("res://chapters/private/chapter_001.json"))
+
+	return errors
+
+
+func validate_chapter_path(path: String) -> Array:
+	var errors: Array = []
+	var mechanics: Variant = _load_json_checked("res://data/mechanics.json", errors)
+	var chapter: Variant = _load_json_checked(path, errors)
+	if chapter is Dictionary:
+		_validate_chapter(chapter, mechanics if mechanics is Dictionary else {}, errors)
 	return errors
 
 
@@ -98,6 +110,7 @@ func _validate_event(event: Dictionary, ids: Dictionary, mechanics: Dictionary, 
 		var mechanic_id: String = event.get("mechanic", "")
 		if not mechanics.has(mechanic_id):
 			errors.append("Event '%s' uses unknown mechanic '%s'." % [event_id, mechanic_id])
+		_validate_mechanic_params(event, event_id, errors)
 
 	if kind == "conditional":
 		_validate_state_path(event.get("condition", {}).get("path", ""), event_id, errors)
@@ -117,6 +130,26 @@ func _validate_event(event: Dictionary, ids: Dictionary, mechanics: Dictionary, 
 	for asset_key in ["asset", "background", "foreground", "portrait"]:
 		if event.has(asset_key):
 			_validate_asset(event[asset_key], event_id, errors)
+
+	for panel_id in event.get("panels", []):
+		_validate_asset(panel_id, event_id, errors)
+
+
+func _validate_mechanic_params(event: Dictionary, event_id: String, errors: Array) -> void:
+	var mechanic_id: String = event.get("mechanic", "")
+	var params: Dictionary = event.get("params", {})
+	match mechanic_id:
+		"scan":
+			var target_id: String = params.get("target", "")
+			var scan_targets: Variant = _singleton("DataManager").load_data_file("scan_targets.json", {})
+			if target_id.is_empty() or not (scan_targets is Dictionary and scan_targets.has(target_id)):
+				errors.append("Event '%s' references missing scan target '%s'." % [event_id, target_id])
+		"map":
+			var preferred_location: String = params.get("location", "")
+			if not preferred_location.is_empty():
+				var locations: Variant = _singleton("DataManager").load_data_file("locations.json", {})
+				if not (locations is Dictionary and locations.has(preferred_location)):
+					errors.append("Event '%s' references missing location '%s'." % [event_id, preferred_location])
 
 
 func _check_ref(next_id: String, event_id: String, ids: Dictionary, errors: Array) -> void:

@@ -37,4 +37,6 @@ assets/manhua/
 assets/private/
 chapters/private/
 chapters/local/
+data/private/
+data/local/
 assets/asset_manifest.local.json

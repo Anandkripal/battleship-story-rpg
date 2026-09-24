@@ -77,6 +77,8 @@ func _build_ui() -> void:
 	actions.add_child(action_spacer)
 
 	_add_button(actions, "Start Demo Chapter", func() -> void: _singleton("EventRunner").start_demo_chapter())
+	if FileAccess.file_exists("res://chapters/private/chapter_001.json"):
+		_add_button(actions, "Private Chapter 1", func() -> void: _singleton("EventRunner").start_chapter("res://chapters/private/chapter_001.json"))
 	_add_button(actions, "Load Save", func() -> void: _singleton("EventRunner").continue_saved_game())
 	_add_button(actions, "System Abilities", func() -> void: _singleton("UIManager").show_scene("res://scenes/system_screen.tscn"))
 	_add_button(actions, "Validate Project", _show_validation)

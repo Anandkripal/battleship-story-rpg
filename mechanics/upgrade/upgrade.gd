@@ -6,7 +6,7 @@ var info_label: Label
 
 func start(new_params: Dictionary) -> void:
 	super.start(new_params)
-	var data: Variant = _singleton("DataManager").load_json("res://data/upgrades.json", {})
+	var data: Variant = _singleton("DataManager").load_data_file("upgrades.json", {})
 	upgrades = data if data is Dictionary else {}
 	_build_ui()
 

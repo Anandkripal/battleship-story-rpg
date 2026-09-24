@@ -7,7 +7,7 @@ var target_data: Dictionary = {}
 func start(new_params: Dictionary) -> void:
 	super.start(new_params)
 	target_id = params.get("target", "")
-	var targets: Variant = _singleton("DataManager").load_json("res://data/scan_targets.json", {})
+	var targets: Variant = _singleton("DataManager").load_data_file("scan_targets.json", {})
 	target_data = targets.get(target_id, {}) if targets is Dictionary else {}
 	_build_ui()
 

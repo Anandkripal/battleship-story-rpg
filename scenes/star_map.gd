@@ -5,7 +5,7 @@ var locations: Dictionary = {}
 
 func start(new_params: Dictionary) -> void:
 	super.start(new_params)
-	var data: Variant = _singleton("DataManager").load_json("res://data/locations.json", {})
+	var data: Variant = _singleton("DataManager").load_data_file("locations.json", {})
 	locations = data if data is Dictionary else {}
 	_build_ui()
 

@@ -14,8 +14,8 @@ var actions_box: HBoxContainer
 
 func start(new_params: Dictionary) -> void:
 	super.start(new_params)
-	var enemies: Variant = _singleton("DataManager").load_json("res://data/enemies.json", {})
-	action_data = _singleton("DataManager").load_json("res://data/battle_actions.json", {})
+	var enemies: Variant = _singleton("DataManager").load_data_file("enemies.json", {})
+	action_data = _singleton("DataManager").load_data_file("battle_actions.json", {})
 	enemy_id = params.get("enemy", "training_drone")
 	enemy = enemies.get(enemy_id, {}) if enemies is Dictionary else {}
 	player_hull = int(_singleton("ShipState").ship_data.get("stats", {}).get("hull", 100))

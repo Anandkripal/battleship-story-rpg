@@ -18,7 +18,7 @@ func _build_ui() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 
-	var loaded: Variant = _singleton("DataManager").load_json("res://data/system_abilities.json", {})
+	var loaded: Variant = _singleton("DataManager").load_data_file("system_abilities.json", {})
 	ability_data = loaded if loaded is Dictionary else {}
 
 	var margin := MarginContainer.new()

@@ -24,6 +24,8 @@ func _build_ui() -> void:
 	match layout_mode:
 		"side_dialogue", "split":
 			_build_side_dialogue()
+		"communication":
+			_build_communication()
 		"full_art":
 			_build_full_art()
 		"cinematic":
@@ -78,6 +80,15 @@ func _build_side_dialogue() -> void:
 	else:
 		row.add_child(art)
 		row.add_child(panel)
+
+
+func _build_communication() -> void:
+	_build_side_dialogue()
+	var frame := ColorRect.new()
+	frame.color = Color(0.25, 0.75, 0.95, 0.08)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(frame)
 
 
 func _build_full_art() -> void:
