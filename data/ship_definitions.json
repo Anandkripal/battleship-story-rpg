@@ -30,6 +30,7 @@
       "battle_max_turn_speed": 0.82,
       "battle_pitch_assist_speed": 0.28,
       "battle_vertical_assist": 0.36,
+      "battle_manual_vertical_factor": 0.5,
       "battle_inertia_damping": 0.4,
       "battle_auto_bank_degrees": 7.0,
       "preferred_range": 10500,

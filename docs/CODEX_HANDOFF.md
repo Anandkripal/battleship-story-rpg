@@ -14,7 +14,7 @@
 
 Ships share the same movement/inertia state, but player input is now separated by control mode:
 
-- `battle`: simplified battleship combat controls. W/S thrust and brake, A/D turn, mouse camera, LMB main cannon, RMB secondary, Space missile, Tab target, Shift boost, R recenter.
+- `battle`: simplified battleship combat controls. W/S thrust and brake, A/D turn, Q/E down/up movement, mouse camera revolve, 1/2/3 active weapon selection, LMB fires active weapon, RMB fires secondary, Space missile, Tab target, Shift boost, R recenter. The control legend stays visible in Demo Battle.
 - `exploration`: free-flight foundation. W/S forward and reverse, A/D strafe, Space/Ctrl vertical, Q/E roll, Shift boost, mouse camera.
 - `autopilot`: existing command-driven movement for tactical/fleet-style orders.
 

@@ -34,6 +34,7 @@ var rotation_input: Vector3 = Vector3.ZERO
 var boost_input := false
 var battle_assist_target: Variant
 var battle_turn_input: float = 0.0
+var battle_vertical_input: float = 0.0
 var damage_dealt: float = 0.0
 var damage_received: float = 0.0
 var destroyed_flag: bool = false
@@ -174,6 +175,7 @@ func set_control_mode(mode: String) -> void:
 		boost_input = false
 		battle_assist_target = null
 		battle_turn_input = 0.0
+		battle_vertical_input = 0.0
 	if direct_control_enabled:
 		command = "manual"
 		target = null
@@ -190,7 +192,7 @@ func set_manual_input(new_thrust: Vector3, new_rotation: Vector3, boost: bool) -
 		target = null
 
 
-func set_battle_input(throttle: float, turn: float, boost: bool, assist_target: Variant) -> void:
+func set_battle_input(throttle: float, turn: float, vertical: float, boost: bool, assist_target: Variant) -> void:
 	control_mode = CONTROL_BATTLE
 	direct_control_enabled = true
 	command = "manual"
@@ -199,6 +201,7 @@ func set_battle_input(throttle: float, turn: float, boost: bool, assist_target: 
 	rotation_input = Vector3.ZERO
 	boost_input = boost
 	battle_turn_input = clamp(turn, -1.0, 1.0)
+	battle_vertical_input = clamp(vertical, -1.0, 1.0)
 	battle_assist_target = assist_target
 
 
@@ -389,7 +392,9 @@ func _update_battle_flight(delta: float) -> void:
 		var brake_strength: float = float(stats.get("battle_brake_factor", 1.75))
 		velocity = velocity.move_toward(Vector3.ZERO, acceleration * brake_strength * delta)
 		acceleration_vector += forward * acceleration * thrust_input.z * reverse_factor * 0.45
-	acceleration_vector += up * _battle_vertical_assist() * acceleration * float(stats.get("battle_vertical_assist", 0.32))
+	var vertical_assist: float = _battle_vertical_assist() * float(stats.get("battle_vertical_assist", 0.32))
+	var manual_vertical: float = battle_vertical_input * float(stats.get("battle_manual_vertical_factor", 0.52))
+	acceleration_vector += up * (vertical_assist + manual_vertical) * acceleration
 	velocity += acceleration_vector * delta
 	if velocity.length() > max_speed * boost_factor:
 		velocity = velocity.normalized() * max_speed * boost_factor

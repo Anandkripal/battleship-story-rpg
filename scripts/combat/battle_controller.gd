@@ -34,6 +34,8 @@ const INPUT_ACTIONS: Dictionary = {
 	"fire_missile": [KEY_3],
 	"battle_cycle_target": [KEY_TAB],
 	"battle_missile": [KEY_SPACE],
+	"battle_up": [KEY_E],
+	"battle_down": [KEY_Q],
 	"battle_help": [KEY_SLASH],
 	"camera_orbit_up": [KEY_I],
 	"camera_orbit_down": [KEY_K],
@@ -85,6 +87,7 @@ var control_help_timer := 8.0
 var camera_manual_timer := 0.0
 var camera_shake := 0.0
 var battle_control_mode := CONTROL_BATTLE
+var active_weapon_index := 0
 var last_player_shield := -1.0
 var last_player_armor := -1.0
 var last_player_hull := -1.0
@@ -153,7 +156,8 @@ func _handle_player_flight_input() -> void:
 	if battle_control_mode == CONTROL_BATTLE:
 		var throttle: float = Input.get_action_strength("flight_forward") - Input.get_action_strength("flight_reverse")
 		var turn: float = Input.get_action_strength("flight_strafe_left") - Input.get_action_strength("flight_strafe_right")
-		selected_ship.set_battle_input(throttle, turn, boost, target_ship)
+		var vertical: float = Input.get_action_strength("battle_up") - Input.get_action_strength("battle_down")
+		selected_ship.set_battle_input(throttle, turn, vertical, boost, target_ship)
 	else:
 		var thrust := Vector3.ZERO
 		thrust.x = Input.get_action_strength("flight_strafe_right") - Input.get_action_strength("flight_strafe_left")
@@ -233,11 +237,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			var enabled: bool = selected_ship.toggle_flight_assist()
 			_log("Flight assist %s." % ("enabled" if enabled else "disabled"))
 		elif event.is_action_pressed("fire_main_weapon"):
-			_fire_weapon_by_id("main_cannon_mk1")
+			_handle_number_weapon_input(0)
 		elif event.is_action_pressed("fire_secondary_weapon"):
-			_fire_weapon_by_id("secondary_cannon_mk1")
+			_handle_number_weapon_input(1)
 		elif event.is_action_pressed("fire_missile"):
-			_fire_weapon_by_id("missile_mk1")
+			_handle_number_weapon_input(2)
 
 
 func _start_default_if_needed() -> void:
@@ -553,7 +557,7 @@ func _refresh_hud() -> void:
 	if selected_ship == null:
 		return
 	var player_status: Dictionary = selected_ship.get_status_percent()
-	player_label.text = "PLAYER: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%\nEnergy %.0f / %.0f\nTAB target | LMB/RMB/Space weapons | / help" % [
+	player_label.text = "PLAYER: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%\nEnergy %.0f / %.0f\n1/2/3 select | LMB active | Space missile" % [
 		selected_ship.display_name,
 		player_status["shield"] * 100.0,
 		player_status["armor"] * 100.0,
@@ -666,8 +670,10 @@ func _rebuild_weapon_buttons() -> void:
 		var weapon_id: String = weapon.get("id", "")
 		var status_text: String = _weapon_status(weapon)
 		var command_hint: String = _weapon_command_hint(weapon_id)
+		var active_prefix: String = "> " if index == active_weapon_index else ""
 		var button := Button.new()
-		button.text = "%s %s\n%s" % [
+		button.text = "%s%s %s\n%s" % [
+			active_prefix,
 			command_hint,
 			weapon.get("display_name", weapon_id),
 			status_text
@@ -675,7 +681,12 @@ func _rebuild_weapon_buttons() -> void:
 		button.custom_minimum_size = Vector2(210, 52)
 		button.add_theme_font_size_override("font_size", 15)
 		button.disabled = target_ship == null or not selected_ship.can_fire(index, target_ship)
-		button.pressed.connect(func() -> void: _fire_selected_weapon(index))
+		button.pressed.connect(func() -> void:
+			if battle_control_mode == CONTROL_BATTLE:
+				_select_active_weapon(index)
+			else:
+				_fire_selected_weapon(index)
+		)
 		weapon_box.add_child(button)
 
 
@@ -713,11 +724,11 @@ func _target_button_text(enemy: Variant) -> String:
 func _weapon_command_hint(weapon_id: String) -> String:
 	match weapon_id:
 		"main_cannon_mk1":
-			return "LMB"
+			return "1"
 		"secondary_cannon_mk1":
-			return "RMB"
+			return "2"
 		"missile_mk1":
-			return "SPACE"
+			return "3"
 		_:
 			return ""
 
@@ -740,12 +751,17 @@ func _hud_label() -> Label:
 
 func _control_help_text() -> String:
 	if battle_control_mode == CONTROL_BATTLE:
-		return "BATTLE CONTROLS\nW/S Thrust/Brake   A/D Turn   Mouse Camera\nLMB Main   RMB Secondary   Space Missile   Tab Target   Shift Boost   R Recenter"
+		return "BATTLE CONTROLS\nW/S Thrust/Brake   A/D Turn   Q/E Down/Up   Mouse Revolve Camera\n1/2/3 Select Weapon   LMB Fire Active   RMB Secondary   Space Missile   Tab Target   Shift Boost   R Recenter"
 	return "EXPLORATION CONTROLS\nW/S Forward/Reverse   A/D Strafe   Space/Ctrl Vertical\nMouse Camera   Q/E Roll   Shift Boost"
 
 
 func _toggle_control_help() -> void:
 	if control_help_label == null:
+		return
+	if battle_control_mode == CONTROL_BATTLE:
+		control_help_label.visible = true
+		control_help_timer = 9999.0
+		_log("Battle control legend stays visible.")
 		return
 	control_help_label.visible = not control_help_label.visible
 	control_help_timer = 9999.0 if control_help_label.visible else 0.0
@@ -753,6 +769,9 @@ func _toggle_control_help() -> void:
 
 func _update_control_help(delta: float) -> void:
 	if control_help_label == null or not control_help_label.visible:
+		return
+	if battle_control_mode == CONTROL_BATTLE:
+		control_help_label.visible = true
 		return
 	control_help_timer -= delta
 	if control_help_timer <= 0.0:
@@ -972,7 +991,38 @@ func _handle_battle_primary_click(screen_position: Vector2) -> void:
 			selected_ship.set_selected(true)
 			_log("Selected %s." % selected_ship.display_name)
 		return
-	_fire_weapon_by_id("main_cannon_mk1")
+	_fire_active_weapon()
+
+
+func _handle_number_weapon_input(index: int) -> void:
+	if battle_control_mode == CONTROL_BATTLE:
+		_select_active_weapon(index)
+	else:
+		match index:
+			0:
+				_fire_weapon_by_id("main_cannon_mk1")
+			1:
+				_fire_weapon_by_id("secondary_cannon_mk1")
+			2:
+				_fire_weapon_by_id("missile_mk1")
+
+
+func _select_active_weapon(index: int) -> void:
+	if selected_ship == null or index < 0 or index >= selected_ship.weapons.size():
+		return
+	active_weapon_index = index
+	var weapon: Dictionary = selected_ship.weapons[active_weapon_index]
+	_log("Selected weapon: %s." % weapon.get("display_name", weapon.get("id", "Weapon")))
+	_refresh_hud()
+
+
+func _fire_active_weapon() -> void:
+	if selected_ship == null:
+		_log("No player ship selected.")
+		return
+	if active_weapon_index < 0 or active_weapon_index >= selected_ship.weapons.size():
+		active_weapon_index = 0
+	_fire_selected_weapon(active_weapon_index)
 
 
 func _handle_left_click(screen_position: Vector2) -> void:

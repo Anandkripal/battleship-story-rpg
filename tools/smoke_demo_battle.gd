@@ -40,12 +40,16 @@ func _run() -> void:
 		errors.append("Battle Mode should hide tactical command buttons by default.")
 	if battle.get("weapon_box") == null:
 		errors.append("Demo battle did not build weapon controls.")
-	elif not _has_button_prefix(battle.get("weapon_box"), "LMB"):
-		errors.append("Weapon HUD is missing LMB main cannon hint.")
-	elif not _has_button_prefix(battle.get("weapon_box"), "RMB"):
-		errors.append("Weapon HUD is missing RMB secondary hint.")
-	elif not _has_button_prefix(battle.get("weapon_box"), "SPACE"):
-		errors.append("Weapon HUD is missing Space missile hint.")
+	elif not _has_button_prefix(battle.get("weapon_box"), "> 1"):
+		errors.append("Weapon HUD is missing active slot 1 main cannon hint.")
+	elif not _has_button_prefix(battle.get("weapon_box"), "2"):
+		errors.append("Weapon HUD is missing slot 2 secondary hint.")
+	elif not _has_button_prefix(battle.get("weapon_box"), "3"):
+		errors.append("Weapon HUD is missing slot 3 missile hint.")
+	if battle.get("control_help_label") == null:
+		errors.append("Battle control legend is missing.")
+	elif not battle.get("control_help_label").visible:
+		errors.append("Battle control legend should stay visible.")
 	if _count_loaded_optional_models(battle) > 0:
 		errors.append("Demo battle loaded optional model assets instead of fast fallback visuals.")
 	if _count_nodes_of_type(battle, "GPUParticles3D") > 0:
@@ -58,14 +62,14 @@ func _run() -> void:
 		if selected_ship.get("control_mode") != "battle":
 			errors.append("Demo battle should start in Battle control mode.")
 		var start_position: Vector3 = selected_ship.global_position
-		selected_ship.set_battle_input(1.0, 0.0, false, target_ship)
+		selected_ship.set_battle_input(1.0, 0.0, 0.0, false, target_ship)
 		for index in range(12):
 			selected_ship.tick(1.0 / 60.0)
 		if selected_ship.velocity.length() <= 0.1:
 			errors.append("Battle thrust did not accelerate the player ship.")
 		if selected_ship.global_position.distance_to(start_position) <= 0.1:
 			errors.append("Battle thrust did not move the player ship.")
-	if not InputMap.has_action("battle_cycle_target") or not InputMap.has_action("battle_missile"):
+	if not InputMap.has_action("battle_cycle_target") or not InputMap.has_action("battle_missile") or not InputMap.has_action("battle_up") or not InputMap.has_action("battle_down"):
 		errors.append("Demo battle input actions were not registered.")
 	if camera != null and selected_ship != null and target_ship != null:
 		if not camera.is_position_in_frustum(selected_ship.global_position):
