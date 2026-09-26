@@ -36,8 +36,18 @@ func _run() -> void:
 		errors.append("Expected target title plus 3 enemy target buttons.")
 	if battle.get("command_box") == null:
 		errors.append("Demo battle did not build command grid.")
-	elif battle.get("command_box").visible:
-		errors.append("Battle Mode should hide tactical command buttons by default.")
+	elif not battle.get("command_box").visible:
+		errors.append("Battle Mode should show EVE-like tactical command buttons.")
+	elif not _has_button_text(battle.get("command_box"), "Orbit"):
+		errors.append("Command grid is missing Orbit button.")
+	elif not _has_button_text(battle.get("command_box"), "Keep Range"):
+		errors.append("Command grid is missing Keep Range button.")
+	elif not _has_button_text(battle.get("command_box"), "Approach"):
+		errors.append("Command grid is missing Approach button.")
+	if battle.get("objective_label") == null:
+		errors.append("Demo battle objective label is missing.")
+	elif not str(battle.get("objective_label").text).contains("MISSION"):
+		errors.append("Objective label does not explain the mission.")
 	if battle.get("weapon_box") == null:
 		errors.append("Demo battle did not build weapon controls.")
 	elif not _has_button_prefix(battle.get("weapon_box"), "> 1"):
@@ -59,8 +69,10 @@ func _run() -> void:
 	var selected_ship: Variant = battle.get("selected_ship")
 	var target_ship: Variant = battle.get("target_ship")
 	if selected_ship != null:
-		if selected_ship.get("control_mode") != "battle":
-			errors.append("Demo battle should start in Battle control mode.")
+		if selected_ship.get("command") != "orbit":
+			errors.append("Demo battle should start with an EVE-like orbit command.")
+		if not bool(battle.get("tactical_autopilot_active")):
+			errors.append("Demo battle should start with tactical autopilot active.")
 		var start_position: Vector3 = selected_ship.global_position
 		selected_ship.set_battle_input(1.0, 0.0, 0.0, false, target_ship)
 		for index in range(12):

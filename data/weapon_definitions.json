@@ -60,9 +60,9 @@
   "enemy_pulse_cannon": {
     "display_name": "Pulse Cannon",
     "weapon_type": "projectile",
-    "damage": 22,
+    "damage": 12,
     "range": 8200,
-    "cooldown": 2.2,
+    "cooldown": 3.1,
     "projectile_speed": 3300,
     "energy_cost": 12,
     "firing_arc_degrees": 85,

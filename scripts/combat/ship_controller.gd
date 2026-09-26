@@ -24,6 +24,9 @@ var target: Variant
 var command: String = "stop"
 var destination: Vector3 = Vector3.ZERO
 var desired_range: float = 420.0
+var orbit_target: Variant
+var orbit_radius: float = 4200.0
+var orbit_seed: float = 0.0
 var velocity: Vector3 = Vector3.ZERO
 var angular_velocity: Vector3 = Vector3.ZERO
 var control_mode: String = CONTROL_AUTOPILOT
@@ -119,10 +122,22 @@ func command_maintain_range(new_target: Variant, range: float) -> void:
 	desired_range = range
 
 
+func command_orbit(new_target: Variant, radius: float) -> void:
+	if new_target == null:
+		return
+	set_control_mode(CONTROL_AUTOPILOT)
+	command = "orbit"
+	target = new_target
+	orbit_target = new_target
+	orbit_radius = max(1200.0, radius)
+	orbit_seed = fmod(float(abs(hash(ship_id))), 6283.0) / 1000.0
+
+
 func command_stop() -> void:
 	set_control_mode(CONTROL_AUTOPILOT)
 	command = "stop"
 	target = null
+	orbit_target = null
 	destination = position
 
 
@@ -134,6 +149,7 @@ func command_retreat(from_position: Vector3) -> void:
 		away = Vector3(0, 0, 1)
 	destination = position + away * 1200.0
 	target = null
+	orbit_target = null
 
 
 func can_fire(weapon_index: int, new_target: Variant) -> bool:
@@ -311,6 +327,10 @@ func _update_movement(delta: float) -> void:
 		if from_target.length() < 0.1:
 			from_target = Vector3(0, 0, 1)
 		destination = target.global_position + from_target.normalized() * desired_range
+	elif command == "orbit" and orbit_target != null and not orbit_target.destroyed_flag:
+		var angle: float = Time.get_ticks_msec() * 0.00022 + orbit_seed
+		var orbit_offset := Vector3(cos(angle) * orbit_radius, sin(angle * 0.7) * orbit_radius * 0.18, sin(angle) * orbit_radius)
+		destination = orbit_target.global_position + orbit_offset
 	elif command == "stop":
 		destination = global_position
 

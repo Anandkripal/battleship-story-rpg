@@ -11,10 +11,10 @@
     "fallback_color": [0.2, 0.55, 1.0],
     "combat_rating": "F+",
     "base_stats": {
-      "max_hull": 420,
-      "max_armor": 260,
-      "max_shield": 180,
-      "shield_recharge": 5,
+      "max_hull": 620,
+      "max_armor": 380,
+      "max_shield": 320,
+      "shield_recharge": 12,
       "max_speed": 850,
       "acceleration": 320,
       "turn_rate": 1.8,
@@ -37,8 +37,8 @@
       "sensor_range": 28000,
       "sensor_strength": 85,
       "signature": 85,
-      "energy_capacity": 160,
-      "energy_recharge": 14
+      "energy_capacity": 220,
+      "energy_recharge": 20
     },
     "standard_slots": ["main_gun", "armor", "engine", "radar", "shield", "hull_structure"],
     "additional_slots": ["special_01"],

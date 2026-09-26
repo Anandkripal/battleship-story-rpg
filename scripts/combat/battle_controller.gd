@@ -69,6 +69,7 @@ var hud_layer: CanvasLayer
 var intro_overlay: Control
 var completion_overlay: Control
 var player_label: Label
+var objective_label: Label
 var target_label: Label
 var log_label: Label
 var weapon_box: VBoxContainer
@@ -88,6 +89,7 @@ var camera_manual_timer := 0.0
 var camera_shake := 0.0
 var battle_control_mode := CONTROL_BATTLE
 var active_weapon_index := 0
+var tactical_autopilot_active := false
 var last_player_shield := -1.0
 var last_player_armor := -1.0
 var last_player_hull := -1.0
@@ -157,7 +159,12 @@ func _handle_player_flight_input() -> void:
 		var throttle: float = Input.get_action_strength("flight_forward") - Input.get_action_strength("flight_reverse")
 		var turn: float = Input.get_action_strength("flight_strafe_left") - Input.get_action_strength("flight_strafe_right")
 		var vertical: float = Input.get_action_strength("battle_up") - Input.get_action_strength("battle_down")
-		selected_ship.set_battle_input(throttle, turn, vertical, boost, target_ship)
+		var manual_input_active: bool = abs(throttle) > 0.02 or abs(turn) > 0.02 or abs(vertical) > 0.02 or boost
+		if manual_input_active:
+			tactical_autopilot_active = false
+			selected_ship.set_battle_input(throttle, turn, vertical, boost, target_ship)
+		elif not tactical_autopilot_active and selected_ship.control_mode == CONTROL_BATTLE:
+			selected_ship.set_battle_input(0.0, 0.0, 0.0, false, target_ship)
 	else:
 		var thrust := Vector3.ZERO
 		thrust.x = Input.get_action_strength("flight_strafe_right") - Input.get_action_strength("flight_strafe_left")
@@ -282,6 +289,8 @@ func _start_battle() -> void:
 		"modules_recovered": [],
 		"alternate_space": bool(payload.get("alternate_space", false))
 	}
+	if battle_control_mode == CONTROL_BATTLE and selected_ship != null and target_ship != null:
+		_orbit_target()
 	_refresh_hud()
 	_update_ship_markers()
 	_start_intro()
@@ -470,6 +479,10 @@ func _build_hud() -> void:
 	player_label.custom_minimum_size = Vector2(330, 116)
 	top.add_child(player_label)
 
+	objective_label = _hud_label()
+	objective_label.custom_minimum_size = Vector2(360, 116)
+	top.add_child(objective_label)
+
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(spacer)
@@ -530,7 +543,17 @@ func _build_hud() -> void:
 func _build_command_buttons() -> void:
 	for child in command_box.get_children():
 		child.queue_free()
-	command_box.visible = battle_control_mode != CONTROL_BATTLE
+	command_box.visible = true
+	if battle_control_mode == CONTROL_BATTLE:
+		command_box.columns = 3
+		_add_command_button("Lock Next", _lock_next_target)
+		_add_command_button("Approach", _approach_target)
+		_add_command_button("Orbit", _orbit_target)
+		_add_command_button("Keep Range", _keep_range_target)
+		_add_command_button("Stop", _stop_ship)
+		_add_command_button("Fire", _fire_active_weapon)
+		return
+	command_box.columns = 4
 	_add_command_button("Main Cannon", func() -> void: _fire_weapon_by_id("main_cannon_mk1"))
 	_add_command_button("Secondary", func() -> void: _fire_weapon_by_id("secondary_cannon_mk1"))
 	_add_command_button("Missile", func() -> void: _fire_weapon_by_id("missile_mk1"))
@@ -566,6 +589,8 @@ func _refresh_hud() -> void:
 		float(selected_ship.stats.get("energy_capacity", 0))
 	]
 	_update_damage_feedback()
+	if objective_label != null:
+		objective_label.text = _objective_text()
 	target_label.text = _target_text()
 	_rebuild_weapon_buttons()
 	_rebuild_target_buttons()
@@ -597,6 +622,22 @@ func _target_text() -> String:
 			]
 		_:
 			return "TARGET\nUndetected signal."
+
+
+func _objective_text() -> String:
+	var total: int = enemy_ships.size()
+	var destroyed_count: int = 0
+	for enemy in enemy_ships:
+		if enemy != null and enemy.destroyed_flag:
+			destroyed_count += 1
+	var current_order: String = "Orbit target and fire modules." if tactical_autopilot_active else "Manual control active."
+	if target_ship == null:
+		current_order = "Lock a hostile from TARGETS."
+	return "MISSION: CLEAR TRAINING POCKET\nDestroy hostile ships: %s / %s\nCurrent order: %s\nSuggested loop: Lock -> Orbit -> Fire" % [
+		destroyed_count,
+		total,
+		current_order
+	]
 
 
 func _target_bearing_text(ship: Variant) -> String:
@@ -680,7 +721,7 @@ func _rebuild_weapon_buttons() -> void:
 		]
 		button.custom_minimum_size = Vector2(210, 52)
 		button.add_theme_font_size_override("font_size", 15)
-		button.disabled = target_ship == null or not selected_ship.can_fire(index, target_ship)
+		button.disabled = battle_control_mode != CONTROL_BATTLE and (target_ship == null or not selected_ship.can_fire(index, target_ship))
 		button.pressed.connect(func() -> void:
 			if battle_control_mode == CONTROL_BATTLE:
 				_select_active_weapon(index)
@@ -977,6 +1018,51 @@ func _cycle_target() -> void:
 	var current_index: int = candidates.find(target_ship)
 	var next_index: int = 0 if current_index < 0 else (current_index + 1) % candidates.size()
 	_select_target(candidates[next_index])
+
+
+func _lock_next_target() -> void:
+	_cycle_target()
+	if target_ship != null:
+		manual_scans[target_ship.ship_id] = true
+		_log("Locked target: %s." % target_ship.display_name)
+		_refresh_hud()
+
+
+func _approach_target() -> void:
+	if selected_ship == null or target_ship == null:
+		_log("Lock a target first.")
+		return
+	tactical_autopilot_active = true
+	selected_ship.command_approach(target_ship)
+	_log("Approaching %s." % target_ship.display_name)
+
+
+func _orbit_target() -> void:
+	if selected_ship == null or target_ship == null:
+		_log("Lock a target first.")
+		return
+	tactical_autopilot_active = true
+	var orbit_range: float = float(config.get("default_orbit_range", 4300.0))
+	selected_ship.command_orbit(target_ship, orbit_range)
+	_log("Orbiting %s at %s." % [target_ship.display_name, _format_distance(orbit_range)])
+
+
+func _keep_range_target() -> void:
+	if selected_ship == null or target_ship == null:
+		_log("Lock a target first.")
+		return
+	tactical_autopilot_active = true
+	var range: float = float(config.get("default_keep_range", 6800.0))
+	selected_ship.command_maintain_range(target_ship, range)
+	_log("Keeping range from %s at %s." % [target_ship.display_name, _format_distance(range)])
+
+
+func _stop_ship() -> void:
+	if selected_ship == null:
+		return
+	tactical_autopilot_active = true
+	selected_ship.command_stop()
+	_log("Ship holding position.")
 
 
 func _handle_battle_primary_click(screen_position: Vector2) -> void:

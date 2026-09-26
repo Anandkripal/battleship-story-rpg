@@ -7,6 +7,8 @@
     "control_mode": "battle",
     "auto_select_first_enemy": true,
     "direct_control_default": true,
+    "default_orbit_range": 4300,
+    "default_keep_range": 6800,
     "keep_opening_camera_after_intro": false,
     "intro": {
       "enabled": false
@@ -81,7 +83,7 @@
           "definition": "enemy_destroyer",
           "display_name": "Demo Destroyer",
           "position": [680, -180, -6100],
-          "weapons": ["enemy_pulse_cannon", "missile_mk1"],
+          "weapons": ["enemy_pulse_cannon"],
           "ai_profile": "maintain_range",
           "reward": {"source_points": 8, "materials": {"iron": 4, "titanium": 1}}
         }
