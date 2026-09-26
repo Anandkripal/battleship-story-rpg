@@ -36,14 +36,16 @@ func _run() -> void:
 		errors.append("Expected target title plus 3 enemy target buttons.")
 	if battle.get("command_box") == null:
 		errors.append("Demo battle did not build command grid.")
-	elif battle.get("command_box").get_child_count() < 11:
-		errors.append("Expected all command buttons in compact command grid.")
-	elif not _has_button_text(battle.get("command_box"), "Main Cannon"):
-		errors.append("Command grid is missing Main Cannon button.")
-	elif not _has_button_text(battle.get("command_box"), "Secondary"):
-		errors.append("Command grid is missing Secondary button.")
-	elif not _has_button_text(battle.get("command_box"), "Missile"):
-		errors.append("Command grid is missing Missile button.")
+	elif battle.get("command_box").visible:
+		errors.append("Battle Mode should hide tactical command buttons by default.")
+	if battle.get("weapon_box") == null:
+		errors.append("Demo battle did not build weapon controls.")
+	elif not _has_button_prefix(battle.get("weapon_box"), "LMB"):
+		errors.append("Weapon HUD is missing LMB main cannon hint.")
+	elif not _has_button_prefix(battle.get("weapon_box"), "RMB"):
+		errors.append("Weapon HUD is missing RMB secondary hint.")
+	elif not _has_button_prefix(battle.get("weapon_box"), "SPACE"):
+		errors.append("Weapon HUD is missing Space missile hint.")
 	if _count_loaded_optional_models(battle) > 0:
 		errors.append("Demo battle loaded optional model assets instead of fast fallback visuals.")
 	if _count_nodes_of_type(battle, "GPUParticles3D") > 0:
@@ -53,17 +55,17 @@ func _run() -> void:
 	var selected_ship: Variant = battle.get("selected_ship")
 	var target_ship: Variant = battle.get("target_ship")
 	if selected_ship != null:
-		if not bool(selected_ship.get("direct_control_enabled")):
-			errors.append("Demo battle should start with direct player flight enabled.")
+		if selected_ship.get("control_mode") != "battle":
+			errors.append("Demo battle should start in Battle control mode.")
 		var start_position: Vector3 = selected_ship.global_position
-		selected_ship.set_manual_input(Vector3(0, 0, 1), Vector3.ZERO, false)
+		selected_ship.set_battle_input(1.0, 0.0, false, target_ship)
 		for index in range(12):
 			selected_ship.tick(1.0 / 60.0)
 		if selected_ship.velocity.length() <= 0.1:
-			errors.append("Manual thrust did not accelerate the player ship.")
+			errors.append("Battle thrust did not accelerate the player ship.")
 		if selected_ship.global_position.distance_to(start_position) <= 0.1:
-			errors.append("Manual thrust did not move the player ship.")
-	if not InputMap.has_action("fire_main_weapon") or not InputMap.has_action("flight_forward"):
+			errors.append("Battle thrust did not move the player ship.")
+	if not InputMap.has_action("battle_cycle_target") or not InputMap.has_action("battle_missile"):
 		errors.append("Demo battle input actions were not registered.")
 	if camera != null and selected_ship != null and target_ship != null:
 		if not camera.is_position_in_frustum(selected_ship.global_position):
@@ -121,5 +123,12 @@ func _largest_control_right_edge(node: Node) -> float:
 func _has_button_text(node: Node, text: String) -> bool:
 	for child in node.get_children():
 		if child is Button and child.text == text:
+			return true
+	return false
+
+
+func _has_button_prefix(node: Node, text: String) -> bool:
+	for child in node.get_children():
+		if child is Button and child.text.begins_with(text):
 			return true
 	return false

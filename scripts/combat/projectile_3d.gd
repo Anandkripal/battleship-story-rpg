@@ -38,7 +38,7 @@ func _process(delta: float) -> void:
 func _build_visual() -> void:
 	var mesh_instance := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
-	mesh.radius = 18.0
+	mesh.radius = float(weapon.get("projectile_radius", 18.0))
 	mesh_instance.mesh = mesh
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(1.0, 0.75, 0.18)
@@ -51,7 +51,7 @@ func _build_visual() -> void:
 func _spawn_hit_flash() -> void:
 	var flash := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
-	mesh.radius = hit_radius * 0.45
+	mesh.radius = hit_radius * float(weapon.get("impact_flash_scale", 0.55))
 	flash.mesh = mesh
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(1.0, 0.45, 0.15, 0.45)

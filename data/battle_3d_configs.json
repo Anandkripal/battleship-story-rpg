@@ -4,9 +4,10 @@
     "battlefield_radius": 14000,
     "performance_mode": true,
     "use_optional_models": false,
+    "control_mode": "battle",
     "auto_select_first_enemy": true,
     "direct_control_default": true,
-    "keep_opening_camera_after_intro": true,
+    "keep_opening_camera_after_intro": false,
     "intro": {
       "enabled": false
     },
@@ -61,7 +62,7 @@
           "id": "demo_frigate_01",
           "definition": "enemy_frigate",
           "display_name": "Demo Frigate",
-          "position": [1800, 60, -4400],
+          "position": [1500, 380, -3600],
           "weapons": ["enemy_pulse_cannon"],
           "ai_profile": "aggressive",
           "reward": {"source_points": 3, "materials": {"iron": 2}}
@@ -70,7 +71,7 @@
           "id": "demo_frigate_02",
           "definition": "enemy_frigate",
           "display_name": "Wing Frigate",
-          "position": [-2300, 120, -5600],
+          "position": [-2100, -320, -4700],
           "weapons": ["enemy_pulse_cannon"],
           "ai_profile": "aggressive",
           "reward": {"source_points": 3, "materials": {"copper": 1}}
@@ -79,7 +80,7 @@
           "id": "demo_destroyer_01",
           "definition": "enemy_destroyer",
           "display_name": "Demo Destroyer",
-          "position": [760, -80, -7600],
+          "position": [680, -180, -6100],
           "weapons": ["enemy_pulse_cannon", "missile_mk1"],
           "ai_profile": "maintain_range",
           "reward": {"source_points": 8, "materials": {"iron": 4, "titanium": 1}}

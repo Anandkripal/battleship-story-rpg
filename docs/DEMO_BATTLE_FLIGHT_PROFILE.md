@@ -20,6 +20,9 @@ Headless smoke checks before the flight-control pass showed the small Demo Battl
 - Enemy fire checks are throttled instead of running every rendered frame.
 - Demo Battle still uses performance mode, fallback ship visuals, reduced starfield count, reduced asteroid count, glow disabled, and no engine particles.
 - The HUD remains low-frequency and compact to avoid the previous 1280px overflow problem.
+- Battle Mode hides the tactical command grid by default and shows a compact controls/weapon HUD instead.
+- New firing, hit, warning, and camera impulse feedback use lightweight mesh/label effects rather than dynamic lights or heavy particles.
+- The chase camera uses simple interpolation and target composition; it does not run expensive target searches every frame.
 
 ## Current Performance Priority
 

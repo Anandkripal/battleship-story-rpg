@@ -10,6 +10,9 @@ const TARGETING := preload("res://scripts/combat/targeting_system.gd")
 const WEAPONS := preload("res://scripts/combat/weapon_system.gd")
 const AI := preload("res://scripts/combat/combat_ai.gd")
 const MODEL_CATALOG := preload("res://scripts/combat/model_catalog.gd")
+const CONTROL_BATTLE := "battle"
+const CONTROL_EXPLORATION := "exploration"
+const CONTROL_AUTOPILOT := "autopilot"
 
 const INPUT_ACTIONS: Dictionary = {
 	"flight_forward": [KEY_W],
@@ -29,6 +32,9 @@ const INPUT_ACTIONS: Dictionary = {
 	"fire_main_weapon": [KEY_1],
 	"fire_secondary_weapon": [KEY_2],
 	"fire_missile": [KEY_3],
+	"battle_cycle_target": [KEY_TAB],
+	"battle_missile": [KEY_SPACE],
+	"battle_help": [KEY_SLASH],
 	"camera_orbit_up": [KEY_I],
 	"camera_orbit_down": [KEY_K],
 	"camera_orbit_left": [KEY_J],
@@ -66,6 +72,8 @@ var log_label: Label
 var weapon_box: VBoxContainer
 var target_box: VBoxContainer
 var command_box: GridContainer
+var control_help_label: Label
+var target_indicator_label: Label
 var result: Dictionary = {}
 var battle_started := false
 var battle_ended := false
@@ -73,6 +81,13 @@ var intro_active := false
 var ai_timer := 0.0
 var enemy_fire_timer := 0.0
 var hud_timer := 0.0
+var control_help_timer := 8.0
+var camera_manual_timer := 0.0
+var camera_shake := 0.0
+var battle_control_mode := CONTROL_BATTLE
+var last_player_shield := -1.0
+var last_player_armor := -1.0
+var last_player_hull := -1.0
 var special_cooldowns: Dictionary = {}
 var manual_scans: Dictionary = {}
 
@@ -116,6 +131,7 @@ func _process(delta: float) -> void:
 	_update_camera(delta)
 	_handle_camera_keyboard(delta)
 	_try_enemy_fire(delta)
+	_update_control_help(delta)
 	hud_timer -= delta
 	if hud_timer <= 0.0:
 		hud_timer = 0.16
@@ -133,20 +149,27 @@ func _physics_process(delta: float) -> void:
 func _handle_player_flight_input() -> void:
 	if selected_ship == null or selected_ship.destroyed_flag:
 		return
-	var thrust := Vector3.ZERO
-	thrust.x = Input.get_action_strength("flight_strafe_right") - Input.get_action_strength("flight_strafe_left")
-	thrust.y = Input.get_action_strength("flight_up") - Input.get_action_strength("flight_down")
-	thrust.z = Input.get_action_strength("flight_forward") - Input.get_action_strength("flight_reverse")
-	var rotation := Vector3.ZERO
-	rotation.x = Input.get_action_strength("flight_pitch_down") - Input.get_action_strength("flight_pitch_up")
-	rotation.y = Input.get_action_strength("flight_yaw_left") - Input.get_action_strength("flight_yaw_right")
-	rotation.z = Input.get_action_strength("flight_roll_left") - Input.get_action_strength("flight_roll_right")
 	var boost: bool = Input.is_action_pressed("flight_boost")
-	if selected_ship.direct_control_enabled or thrust.length() > 0.01 or rotation.length() > 0.01:
-		selected_ship.set_manual_input(thrust, rotation, boost)
+	if battle_control_mode == CONTROL_BATTLE:
+		var throttle: float = Input.get_action_strength("flight_forward") - Input.get_action_strength("flight_reverse")
+		var turn: float = Input.get_action_strength("flight_strafe_left") - Input.get_action_strength("flight_strafe_right")
+		selected_ship.set_battle_input(throttle, turn, boost, target_ship)
+	else:
+		var thrust := Vector3.ZERO
+		thrust.x = Input.get_action_strength("flight_strafe_right") - Input.get_action_strength("flight_strafe_left")
+		thrust.y = Input.get_action_strength("flight_up") - Input.get_action_strength("flight_down")
+		thrust.z = Input.get_action_strength("flight_forward") - Input.get_action_strength("flight_reverse")
+		var rotation := Vector3.ZERO
+		rotation.x = Input.get_action_strength("flight_pitch_down") - Input.get_action_strength("flight_pitch_up")
+		rotation.y = Input.get_action_strength("flight_yaw_left") - Input.get_action_strength("flight_yaw_right")
+		rotation.z = Input.get_action_strength("flight_roll_left") - Input.get_action_strength("flight_roll_right")
+		if selected_ship.direct_control_enabled or thrust.length() > 0.01 or rotation.length() > 0.01:
+			selected_ship.set_manual_input(thrust, rotation, boost)
 
 
 func _handle_camera_keyboard(delta: float) -> void:
+	if battle_control_mode == CONTROL_BATTLE:
+		return
 	var orbit_speed: float = 1.85 * delta
 	camera_yaw += (Input.get_action_strength("camera_orbit_left") - Input.get_action_strength("camera_orbit_right")) * orbit_speed
 	camera_pitch = clamp(camera_pitch + (Input.get_action_strength("camera_orbit_up") - Input.get_action_strength("camera_orbit_down")) * orbit_speed * 0.7, -1.25, -0.12)
@@ -161,7 +184,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
-		if mouse_event.button_index == MOUSE_BUTTON_RIGHT:
+		if battle_control_mode == CONTROL_BATTLE and mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
+			_handle_battle_primary_click(mouse_event.position)
+		elif battle_control_mode == CONTROL_BATTLE and mouse_event.button_index == MOUSE_BUTTON_RIGHT and mouse_event.pressed:
+			_fire_weapon_by_id("secondary_cannon_mk1")
+		elif mouse_event.button_index == MOUSE_BUTTON_RIGHT:
 			rotating_camera = mouse_event.pressed
 			last_mouse_position = mouse_event.position
 		elif mouse_event.button_index == MOUSE_BUTTON_MIDDLE:
@@ -175,7 +202,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			_handle_left_click(mouse_event.position)
 	elif event is InputEventMouseMotion:
 		var motion := event as InputEventMouseMotion
-		if rotating_camera:
+		if battle_control_mode == CONTROL_BATTLE:
+			camera_yaw -= motion.relative.x * 0.0042
+			camera_pitch = clamp(camera_pitch - motion.relative.y * 0.0032, -1.05, -0.16)
+			camera_manual_timer = 2.4
+		elif rotating_camera:
 			camera_yaw -= motion.relative.x * 0.006
 			camera_pitch = clamp(camera_pitch - motion.relative.y * 0.004, -1.25, -0.12)
 		elif panning_camera:
@@ -192,7 +223,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			_focus_target_ship()
 		elif event.is_action_pressed("battle_retreat"):
 			_finish_battle("retreat")
-		elif event.is_action_pressed("flight_assist_toggle") and selected_ship != null:
+		elif event.is_action_pressed("battle_cycle_target"):
+			_cycle_target()
+		elif event.is_action_pressed("battle_missile"):
+			_fire_weapon_by_id("missile_mk1")
+		elif event.is_action_pressed("battle_help"):
+			_toggle_control_help()
+		elif battle_control_mode != CONTROL_BATTLE and event.is_action_pressed("flight_assist_toggle") and selected_ship != null:
 			var enabled: bool = selected_ship.toggle_flight_assist()
 			_log("Flight assist %s." % ("enabled" if enabled else "disabled"))
 		elif event.is_action_pressed("fire_main_weapon"):
@@ -218,13 +255,14 @@ func _start_battle() -> void:
 	module_definitions = _load_data("fire_warship_modules.json")
 	var configs := _load_data("battle_3d_configs.json")
 	config = configs.get(payload.get("battle_config", "prototype_fire_warship_trial"), {})
+	battle_control_mode = config.get("control_mode", CONTROL_BATTLE)
 	_build_world()
 	_spawn_fleet(config.get("player_fleet", {}), player_ships)
 	_spawn_fleet(config.get("enemy_fleet", {}), enemy_ships)
 	if not player_ships.is_empty():
 		selected_ship = player_ships[0]
 		selected_ship.set_selected(true)
-		selected_ship.set_direct_control(bool(config.get("direct_control_default", false)))
+		selected_ship.set_control_mode(battle_control_mode if bool(config.get("direct_control_default", true)) else CONTROL_AUTOPILOT)
 		camera_target = selected_ship.global_position
 		follow_selected = true
 	if bool(config.get("auto_select_first_enemy", false)) and not enemy_ships.is_empty():
@@ -243,7 +281,10 @@ func _start_battle() -> void:
 	_refresh_hud()
 	_update_ship_markers()
 	_start_intro()
-	_apply_opening_camera()
+	if intro_active or bool(config.get("keep_opening_camera_after_intro", false)):
+		_apply_opening_camera()
+	elif battle_control_mode == CONTROL_BATTLE:
+		_recenter_camera_behind_ship()
 
 
 func _build_world() -> void:
@@ -399,6 +440,12 @@ func _build_hud() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hud_layer.add_child(root)
 
+	target_indicator_label = _hud_label()
+	target_indicator_label.visible = false
+	target_indicator_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	target_indicator_label.add_theme_font_size_override("font_size", 18)
+	root.add_child(target_indicator_label)
+
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 12)
@@ -457,12 +504,29 @@ func _build_hud() -> void:
 	log_label.custom_minimum_size = Vector2(230, 104)
 	bottom.add_child(log_label)
 
+	control_help_label = _hud_label()
+	control_help_label.text = _control_help_text()
+	control_help_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	control_help_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	control_help_label.add_theme_font_size_override("font_size", 18)
+	control_help_label.modulate = Color(0.82, 0.96, 1.0, 0.94)
+	control_help_label.anchor_left = 0.5
+	control_help_label.anchor_top = 0.16
+	control_help_label.anchor_right = 0.5
+	control_help_label.anchor_bottom = 0.16
+	control_help_label.offset_left = -275
+	control_help_label.offset_top = -58
+	control_help_label.offset_right = 275
+	control_help_label.offset_bottom = 58
+	root.add_child(control_help_label)
+
 	_build_command_buttons()
 
 
 func _build_command_buttons() -> void:
 	for child in command_box.get_children():
 		child.queue_free()
+	command_box.visible = battle_control_mode != CONTROL_BATTLE
 	_add_command_button("Main Cannon", func() -> void: _fire_weapon_by_id("main_cannon_mk1"))
 	_add_command_button("Secondary", func() -> void: _fire_weapon_by_id("secondary_cannon_mk1"))
 	_add_command_button("Missile", func() -> void: _fire_weapon_by_id("missile_mk1"))
@@ -489,23 +553,20 @@ func _refresh_hud() -> void:
 	if selected_ship == null:
 		return
 	var player_status: Dictionary = selected_ship.get_status_percent()
-	var control_mode: String = "MANUAL" if selected_ship.direct_control_enabled else "AUTO"
-	var assist_mode: String = "ON" if selected_ship.flight_assist_enabled else "OFF"
-	player_label.text = "PLAYER: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%\nEnergy %.0f / %.0f | Speed %.0f\nMode %s | Assist %s | W/S A/D Space/Ctrl | Arrows Q/E | 1/2/3" % [
+	player_label.text = "PLAYER: %s\nShield %.0f%%  Armor %.0f%%  Hull %.0f%%\nEnergy %.0f / %.0f\nTAB target | LMB/RMB/Space weapons | / help" % [
 		selected_ship.display_name,
 		player_status["shield"] * 100.0,
 		player_status["armor"] * 100.0,
 		player_status["hull"] * 100.0,
 		selected_ship.energy,
-		float(selected_ship.stats.get("energy_capacity", 0)),
-		selected_ship.velocity.length(),
-		control_mode,
-		assist_mode
+		float(selected_ship.stats.get("energy_capacity", 0))
 	]
+	_update_damage_feedback()
 	target_label.text = _target_text()
 	_rebuild_weapon_buttons()
 	_rebuild_target_buttons()
 	_update_ship_markers()
+	_update_target_indicator()
 
 
 func _target_text() -> String:
@@ -552,6 +613,51 @@ func _target_bearing_text(ship: Variant) -> String:
 	return "%s / %s / %s" % [fore_aft, horizontal, vertical]
 
 
+func _update_target_indicator() -> void:
+	if target_indicator_label == null:
+		return
+	if target_ship == null or camera == null:
+		target_indicator_label.visible = false
+		return
+	if camera.is_position_in_frustum(target_ship.global_position):
+		target_indicator_label.visible = false
+		return
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var direction: Vector3 = camera.global_transform.basis.inverse() * (target_ship.global_position - camera.global_position)
+	var x_hint: String = "RIGHT" if direction.x > 0.0 else "LEFT"
+	var y_hint: String = "HIGH" if direction.y > 0.0 else "LOW"
+	target_indicator_label.text = "TARGET %s / %s" % [x_hint, y_hint]
+	target_indicator_label.position = Vector2(
+		viewport_size.x - 220.0 if direction.x > 0.0 else 24.0,
+		80.0 if direction.y > 0.0 else viewport_size.y - 150.0
+	)
+	target_indicator_label.visible = true
+
+
+func _update_damage_feedback() -> void:
+	if selected_ship == null:
+		return
+	if last_player_shield < 0.0:
+		last_player_shield = selected_ship.shield
+		last_player_armor = selected_ship.armor
+		last_player_hull = selected_ship.hull
+		return
+	if selected_ship.shield < last_player_shield:
+		camera_shake = max(camera_shake, 0.12)
+		_log("Shield impact.")
+	elif selected_ship.armor < last_player_armor:
+		camera_shake = max(camera_shake, 0.16)
+		_log("Armor hit.")
+	elif selected_ship.hull < last_player_hull:
+		camera_shake = max(camera_shake, 0.22)
+		_log("Hull damage. Break contact or finish the target.")
+	if selected_ship.get_status_percent()["hull"] < 0.28:
+		_log("LOW HULL WARNING.")
+	last_player_shield = selected_ship.shield
+	last_player_armor = selected_ship.armor
+	last_player_hull = selected_ship.hull
+
+
 func _rebuild_weapon_buttons() -> void:
 	for child in weapon_box.get_children():
 		child.queue_free()
@@ -559,8 +665,10 @@ func _rebuild_weapon_buttons() -> void:
 		var weapon: Dictionary = selected_ship.weapons[index]
 		var weapon_id: String = weapon.get("id", "")
 		var status_text: String = _weapon_status(weapon)
+		var command_hint: String = _weapon_command_hint(weapon_id)
 		var button := Button.new()
-		button.text = "%s\n%s" % [
+		button.text = "%s %s\n%s" % [
+			command_hint,
 			weapon.get("display_name", weapon_id),
 			status_text
 		]
@@ -602,6 +710,18 @@ func _target_button_text(enemy: Variant) -> String:
 			return "%sUnknown Contact\n%s" % [prefix, distance_text]
 
 
+func _weapon_command_hint(weapon_id: String) -> String:
+	match weapon_id:
+		"main_cannon_mk1":
+			return "LMB"
+		"secondary_cannon_mk1":
+			return "RMB"
+		"missile_mk1":
+			return "SPACE"
+		_:
+			return ""
+
+
 func _add_command_button(text: String, callback: Callable) -> void:
 	var button := Button.new()
 	button.text = text
@@ -616,6 +736,27 @@ func _hud_label() -> Label:
 	label.add_theme_font_size_override("font_size", 16)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
+
+
+func _control_help_text() -> String:
+	if battle_control_mode == CONTROL_BATTLE:
+		return "BATTLE CONTROLS\nW/S Thrust/Brake   A/D Turn   Mouse Camera\nLMB Main   RMB Secondary   Space Missile   Tab Target   Shift Boost   R Recenter"
+	return "EXPLORATION CONTROLS\nW/S Forward/Reverse   A/D Strafe   Space/Ctrl Vertical\nMouse Camera   Q/E Roll   Shift Boost"
+
+
+func _toggle_control_help() -> void:
+	if control_help_label == null:
+		return
+	control_help_label.visible = not control_help_label.visible
+	control_help_timer = 9999.0 if control_help_label.visible else 0.0
+
+
+func _update_control_help(delta: float) -> void:
+	if control_help_label == null or not control_help_label.visible:
+		return
+	control_help_timer -= delta
+	if control_help_timer <= 0.0:
+		control_help_label.visible = false
 
 
 func _spawn_fleet(fleet: Dictionary, target_array: Array) -> void:
@@ -707,7 +848,46 @@ func _spawn_projectile(source: Variant, weapon_index: int, target: Variant) -> N
 	var projectile: Node3D = source.fire_weapon(weapon_index, target, packed)
 	if projectile != null:
 		add_child(projectile)
+		_spawn_muzzle_flash(source, weapon)
+		if source == selected_ship:
+			camera_shake = max(camera_shake, _weapon_camera_impulse(weapon))
+		elif target == selected_ship and weapon.get("weapon_type", "") == "missile":
+			camera_shake = max(camera_shake, 0.1)
+			_log("MISSILE INCOMING: %s." % _target_bearing_text(source))
 	return projectile
+
+
+func _weapon_camera_impulse(weapon: Dictionary) -> float:
+	match weapon.get("id", ""):
+		"main_cannon_mk1":
+			return 0.14
+		"secondary_cannon_mk1":
+			return 0.05
+		"missile_mk1":
+			return 0.08
+		_:
+			return 0.04
+
+
+func _spawn_muzzle_flash(source: Variant, weapon: Dictionary) -> void:
+	if source == null:
+		return
+	var hardpoint_name: String = weapon.get("hardpoint", "MainWeapon")
+	var flash := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = float(weapon.get("muzzle_flash_radius", 42.0))
+	flash.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(1.0, 0.72, 0.22, 0.62)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.emission_enabled = true
+	material.emission = Color(1.0, 0.45, 0.1) * 1.4
+	flash.material_override = material
+	add_child(flash)
+	flash.global_position = source.get_hardpoint_global_position(hardpoint_name)
+	var tween := flash.create_tween()
+	tween.tween_property(flash, "scale", Vector3(2.0, 2.0, 2.0), 0.09)
+	tween.tween_callback(flash.queue_free)
 
 
 func _scan_target() -> void:
@@ -758,6 +938,43 @@ func _select_target(new_target: Variant) -> void:
 	_refresh_hud()
 
 
+func _cycle_target() -> void:
+	var candidates: Array = []
+	for enemy in enemy_ships:
+		if enemy == null or enemy.destroyed_flag:
+			continue
+		candidates.append(enemy)
+	if candidates.is_empty():
+		_log("No hostile targets.")
+		return
+	candidates.sort_custom(func(a: Variant, b: Variant) -> bool:
+		var a_visible: bool = camera != null and camera.is_position_in_frustum(a.global_position)
+		var b_visible: bool = camera != null and camera.is_position_in_frustum(b.global_position)
+		if a_visible != b_visible:
+			return a_visible
+		var player_position: Vector3 = selected_ship.global_position if selected_ship != null else Vector3.ZERO
+		return player_position.distance_to(a.global_position) < player_position.distance_to(b.global_position)
+	)
+	var current_index: int = candidates.find(target_ship)
+	var next_index: int = 0 if current_index < 0 else (current_index + 1) % candidates.size()
+	_select_target(candidates[next_index])
+
+
+func _handle_battle_primary_click(screen_position: Vector2) -> void:
+	var clicked_ship: Variant = _ship_at_screen_position(screen_position)
+	if clicked_ship != null:
+		if clicked_ship.faction == "enemy":
+			_select_target(clicked_ship)
+		elif clicked_ship.faction == "player":
+			if selected_ship != null:
+				selected_ship.set_selected(false)
+			selected_ship = clicked_ship
+			selected_ship.set_selected(true)
+			_log("Selected %s." % selected_ship.display_name)
+		return
+	_fire_weapon_by_id("main_cannon_mk1")
+
+
 func _handle_left_click(screen_position: Vector2) -> void:
 	var clicked_ship: Variant = _ship_at_screen_position(screen_position)
 	if clicked_ship != null:
@@ -806,13 +1023,30 @@ func _screen_to_battle_plane(screen_position: Vector2) -> Vector3:
 
 
 func _update_camera(delta: float) -> void:
-	if follow_selected and selected_ship != null:
+	if battle_control_mode == CONTROL_BATTLE and follow_selected and selected_ship != null:
+		camera_manual_timer = max(0.0, camera_manual_timer - delta)
+		var desired_target: Vector3 = selected_ship.global_position
+		if target_ship != null and not target_ship.destroyed_flag:
+			var target_offset: Vector3 = target_ship.global_position - selected_ship.global_position
+			desired_target += target_offset.limit_length(2600.0) * 0.24
+		camera_target = camera_target.lerp(desired_target, min(1.0, delta * 2.8))
+		if camera_manual_timer <= 0.0:
+			var forward: Vector3 = -selected_ship.global_transform.basis.z.normalized()
+			var behind: Vector3 = -forward
+			var desired_yaw: float = atan2(behind.x, behind.z)
+			camera_yaw = lerp_angle(camera_yaw, desired_yaw, min(1.0, delta * 1.45))
+			camera_pitch = lerp(camera_pitch, -0.45, min(1.0, delta * 1.2))
+	elif follow_selected and selected_ship != null:
 		camera_target = camera_target.lerp(selected_ship.global_position, min(1.0, delta * 2.2))
 	var offset := Vector3(
 		sin(camera_yaw) * cos(camera_pitch),
 		-sin(camera_pitch),
 		cos(camera_yaw) * cos(camera_pitch)
 	) * camera_distance
+	if camera_shake > 0.0:
+		var shake_offset := Vector3(sin(Time.get_ticks_msec() * 0.047), cos(Time.get_ticks_msec() * 0.039), 0.0) * camera_shake * 85.0
+		offset += shake_offset
+		camera_shake = max(0.0, camera_shake - delta * 1.8)
 	camera.global_position = camera.global_position.lerp(camera_target + offset, min(1.0, delta * 7.0))
 	camera.look_at(camera_target, Vector3.UP)
 
@@ -1095,16 +1329,17 @@ func _weapon_status(weapon: Dictionary) -> String:
 	var range: float = float(weapon.get("range", 0.0))
 	var distance: float = selected_ship.global_position.distance_to(target_ship.global_position) if target_ship != null else 0.0
 	if target_ship == null:
-		return "Range %s | No target" % _format_distance(range)
+		return "NO TARGET"
 	if distance > range:
-		return "Range %s | Target %s | OUT" % [_format_distance(range), _format_distance(distance)]
-	if not selected_ship.target_in_firing_arc(weapon, target_ship):
-		return "Arc %.0f° | ALIGN" % selected_ship.firing_arc_angle(weapon, target_ship)
+		return "OUT OF RANGE"
 	if selected_ship.energy < float(weapon.get("energy_cost", 0)):
-		return "Range %s | ENERGY LOW" % _format_distance(range)
+		return "ENERGY LOW"
 	if cooldown > 0.0:
-		return "Range %s | CD %.1f" % [_format_distance(range), cooldown]
-	return "Range %s | READY" % _format_distance(range)
+		return "RELOADING %.1f" % cooldown
+	if not selected_ship.target_in_firing_arc(weapon, target_ship):
+		var angle: float = selected_ship.firing_arc_angle(weapon, target_ship)
+		return "TURN TO TARGET %.0f°" % angle
+	return "READY"
 
 
 func _weapon_block_reason(index: int) -> String:

@@ -4,6 +4,9 @@ extends Node3D
 signal destroyed(ship: Variant)
 
 const VISUAL_WRAPPER := preload("res://scripts/combat/ship_visual_wrapper.gd")
+const CONTROL_AUTOPILOT := "autopilot"
+const CONTROL_BATTLE := "battle"
+const CONTROL_EXPLORATION := "exploration"
 
 var ship_id: String = ""
 var display_name: String = ""
@@ -23,11 +26,14 @@ var destination: Vector3 = Vector3.ZERO
 var desired_range: float = 420.0
 var velocity: Vector3 = Vector3.ZERO
 var angular_velocity: Vector3 = Vector3.ZERO
+var control_mode: String = CONTROL_AUTOPILOT
 var direct_control_enabled := false
 var flight_assist_enabled := true
 var thrust_input: Vector3 = Vector3.ZERO
 var rotation_input: Vector3 = Vector3.ZERO
 var boost_input := false
+var battle_assist_target: Variant
+var battle_turn_input: float = 0.0
 var damage_dealt: float = 0.0
 var damage_received: float = 0.0
 var destroyed_flag: bool = false
@@ -88,7 +94,7 @@ func tick(delta: float) -> void:
 
 
 func command_move(point: Vector3) -> void:
-	direct_control_enabled = false
+	set_control_mode(CONTROL_AUTOPILOT)
 	command = "move"
 	destination = point
 	target = null
@@ -98,7 +104,7 @@ func command_approach(new_target: Variant) -> void:
 	if new_target == null:
 		return
 	target = new_target
-	direct_control_enabled = false
+	set_control_mode(CONTROL_AUTOPILOT)
 	command = "approach"
 	desired_range = float(stats.get("preferred_range", 8500.0))
 
@@ -107,20 +113,20 @@ func command_maintain_range(new_target: Variant, range: float) -> void:
 	if new_target == null:
 		return
 	target = new_target
-	direct_control_enabled = false
+	set_control_mode(CONTROL_AUTOPILOT)
 	command = "maintain_range"
 	desired_range = range
 
 
 func command_stop() -> void:
-	direct_control_enabled = false
+	set_control_mode(CONTROL_AUTOPILOT)
 	command = "stop"
 	target = null
 	destination = position
 
 
 func command_retreat(from_position: Vector3) -> void:
-	direct_control_enabled = false
+	set_control_mode(CONTROL_AUTOPILOT)
 	command = "retreat"
 	var away: Vector3 = (position - from_position).normalized()
 	if away.length() < 0.1:
@@ -156,18 +162,44 @@ func fire_weapon(weapon_index: int, new_target: Variant, projectile_scene: Packe
 
 
 func set_direct_control(enabled: bool) -> void:
-	direct_control_enabled = enabled
-	if enabled:
+	set_control_mode(CONTROL_EXPLORATION if enabled else CONTROL_AUTOPILOT)
+
+
+func set_control_mode(mode: String) -> void:
+	control_mode = mode
+	direct_control_enabled = mode == CONTROL_BATTLE or mode == CONTROL_EXPLORATION
+	if not direct_control_enabled:
+		thrust_input = Vector3.ZERO
+		rotation_input = Vector3.ZERO
+		boost_input = false
+		battle_assist_target = null
+		battle_turn_input = 0.0
+	if direct_control_enabled:
 		command = "manual"
 		target = null
 
 
 func set_manual_input(new_thrust: Vector3, new_rotation: Vector3, boost: bool) -> void:
+	control_mode = CONTROL_EXPLORATION
 	thrust_input = new_thrust.limit_length(1.0)
 	rotation_input = new_rotation.limit_length(1.0)
 	boost_input = boost
 	if thrust_input.length() > 0.01 or rotation_input.length() > 0.01:
-		set_direct_control(true)
+		direct_control_enabled = true
+		command = "manual"
+		target = null
+
+
+func set_battle_input(throttle: float, turn: float, boost: bool, assist_target: Variant) -> void:
+	control_mode = CONTROL_BATTLE
+	direct_control_enabled = true
+	command = "manual"
+	target = null
+	thrust_input = Vector3(0.0, 0.0, clamp(throttle, -1.0, 1.0))
+	rotation_input = Vector3.ZERO
+	boost_input = boost
+	battle_turn_input = clamp(turn, -1.0, 1.0)
+	battle_assist_target = assist_target
 
 
 func toggle_flight_assist() -> bool:
@@ -183,7 +215,7 @@ func target_in_firing_arc(weapon: Dictionary, new_target: Variant) -> bool:
 	var to_target: Vector3 = (new_target.global_position - get_hardpoint_global_position(hardpoint_name)).normalized()
 	if to_target.length() < 0.001:
 		return true
-	var arc: float = float(weapon.get("firing_arc_degrees", 180.0))
+	var arc: float = float(weapon.get("firing_arc_degrees", 180.0)) + float(weapon.get("aim_assist_degrees", 0.0))
 	var angle: float = rad_to_deg(acos(clamp(forward.dot(to_target), -1.0, 1.0)))
 	return angle <= arc * 0.5
 
@@ -296,6 +328,13 @@ func _update_movement(delta: float) -> void:
 
 
 func _update_direct_flight(delta: float) -> void:
+	if control_mode == CONTROL_BATTLE:
+		_update_battle_flight(delta)
+		return
+	_update_exploration_flight(delta)
+
+
+func _update_exploration_flight(delta: float) -> void:
 	var forward: Vector3 = -global_transform.basis.z
 	var right: Vector3 = global_transform.basis.x
 	var up: Vector3 = global_transform.basis.y
@@ -332,6 +371,68 @@ func _update_direct_flight(delta: float) -> void:
 	rotate_object_local(Vector3.UP, angular_velocity.y * delta)
 	rotate_object_local(Vector3.FORWARD, angular_velocity.z * delta)
 	_update_engine_effects()
+
+
+func _update_battle_flight(delta: float) -> void:
+	var forward: Vector3 = -global_transform.basis.z
+	var up: Vector3 = global_transform.basis.y
+	var max_speed: float = float(stats.get("max_speed", 20))
+	var acceleration: float = float(stats.get("acceleration", 6))
+	var reverse_factor: float = float(stats.get("reverse_thrust_factor", 0.55))
+	var boost_factor: float = float(stats.get("boost_factor", 1.25)) if boost_input and thrust_input.z > 0.1 and energy > 3.0 else 1.0
+	if boost_factor > 1.0:
+		energy = max(0.0, energy - float(stats.get("boost_energy_per_second", 18.0)) * delta)
+	var acceleration_vector: Vector3 = Vector3.ZERO
+	if thrust_input.z > 0.0:
+		acceleration_vector += forward * acceleration * thrust_input.z * boost_factor
+	elif thrust_input.z < 0.0:
+		var brake_strength: float = float(stats.get("battle_brake_factor", 1.75))
+		velocity = velocity.move_toward(Vector3.ZERO, acceleration * brake_strength * delta)
+		acceleration_vector += forward * acceleration * thrust_input.z * reverse_factor * 0.45
+	acceleration_vector += up * _battle_vertical_assist() * acceleration * float(stats.get("battle_vertical_assist", 0.32))
+	velocity += acceleration_vector * delta
+	if velocity.length() > max_speed * boost_factor:
+		velocity = velocity.normalized() * max_speed * boost_factor
+	var damping: float = acceleration * float(stats.get("battle_inertia_damping", 0.34)) * delta
+	if thrust_input.z >= -0.01:
+		velocity = velocity.move_toward(velocity.project(forward), damping)
+	if thrust_input.length() < 0.02:
+		velocity = velocity.move_toward(Vector3.ZERO, acceleration * 0.22 * delta)
+	global_position += velocity * delta
+
+	var turn_acceleration: float = float(stats.get("battle_turn_acceleration", stats.get("angular_acceleration", 0.9)))
+	var max_turn_speed: float = float(stats.get("battle_max_turn_speed", stats.get("max_angular_speed", 0.62)))
+	var pitch_assist: float = _battle_pitch_assist()
+	var desired_angular_velocity: Vector3 = Vector3(pitch_assist, battle_turn_input * max_turn_speed, 0.0)
+	angular_velocity = angular_velocity.move_toward(desired_angular_velocity, turn_acceleration * delta)
+	rotate_object_local(Vector3.RIGHT, angular_velocity.x * delta)
+	rotate_object_local(Vector3.UP, angular_velocity.y * delta)
+	_update_visual_bank(delta)
+	_update_engine_effects()
+
+
+func _battle_pitch_assist() -> float:
+	if battle_assist_target == null or battle_assist_target.destroyed_flag:
+		return 0.0
+	var local_offset: Vector3 = global_transform.basis.inverse() * (battle_assist_target.global_position - global_position)
+	if local_offset.length() < 1.0 or local_offset.z > 1200.0:
+		return 0.0
+	var vertical_ratio: float = clamp(local_offset.y / max(1600.0, abs(local_offset.z)), -1.0, 1.0)
+	return -vertical_ratio * float(stats.get("battle_pitch_assist_speed", 0.24))
+
+
+func _battle_vertical_assist() -> float:
+	if battle_assist_target == null or battle_assist_target.destroyed_flag:
+		return 0.0
+	var vertical_delta: float = battle_assist_target.global_position.y - global_position.y
+	return clamp(vertical_delta / 2400.0, -1.0, 1.0)
+
+
+func _update_visual_bank(delta: float) -> void:
+	if visual_root == null:
+		return
+	var target_bank: float = -battle_turn_input * deg_to_rad(float(stats.get("battle_auto_bank_degrees", 7.5)))
+	visual_root.rotation.z = lerp_angle(visual_root.rotation.z, target_bank, min(1.0, delta * 3.2))
 
 
 func _destroy() -> void:
